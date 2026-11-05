@@ -22,10 +22,14 @@ button,input,select{font:inherit}button{cursor:pointer;border:0}
 @media(max-width:620px){.sidebar{width:65px;padding:15px 7px}.brand{padding:0 5px 18px}.brand b,.brand small,.navlabel,.nav button .txt,.sidebar-foot{display:none}.brandmark{width:42px}.nav button{justify-content:center;padding:12px 4px}.nav .ico{font-size:18px}.topbar{padding:0 14px}.content{padding:20px 13px}.welcome{align-items:flex-start;flex-direction:column}.welcome h1{font-size:22px}.stats{gap:9px}.stat{padding:13px}.stat strong{font-size:21px}.toolbar{align-items:stretch;flex-direction:column}.search{width:100%}}
 
 
+
+#appShell{display:none}#loginScreen{min-height:100vh;display:grid;place-items:center;padding:22px;background:radial-gradient(circle at top right,#244765,#10243a 55%,#091827)}
+.login-card{width:min(430px,100%);background:#fff;border-radius:18px;padding:32px;box-shadow:0 24px 70px #0005}.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}.login-brand .brandmark{width:48px;height:48px}.login-card h1{color:#10243a;font-size:24px;margin:0 0 5px}.login-card p{color:#718096;margin:0 0 22px;font-size:13px}.login-card .field{margin:14px 0}.login-card .field input{padding:12px}.login-submit{width:100%;padding:12px;margin-top:12px}.login-error{display:none;color:#b63e3e;background:#fff0f0;border-radius:8px;padding:9px 11px;font-size:12px;margin-top:12px}.login-hint{margin-top:18px;padding:12px;background:#f5f7fa;border-radius:9px;color:#66788a;font-size:11px;line-height:1.7}.logout-btn{background:#fff0f0;color:#b63e3e;padding:8px 11px;border-radius:8px;font-weight:700}.dark .login-card{background:#182738;color:#e6edf4}.dark .login-card h1{color:#e6edf4}.dark .login-hint{background:#223548;color:#c1cfdd}
 </style>
 </head>
 <body>
-<div class="app">
+<section id="loginScreen"><div class="login-card"><div class="login-brand"><div class="brandmark">U</div><div><b style="color:#10243a;letter-spacing:.6px">UBUBIKO SMART</b><div style="font-size:10px;color:#718096;letter-spacing:1.2px">INVENTORY MANAGEMENT</div></div></div><h1>Welcome back</h1><p>Sign in to continue to your inventory dashboard.</p><form id="loginForm"><div class="field"><label for="loginUsername">Username</label><input id="loginUsername" autocomplete="username" placeholder="Enter username" required></div><div class="field"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Enter password" required></div><button class="btn gold login-submit" type="submit">Sign in →</button><div id="loginError" class="login-error">Incorrect username or password.</div></form><div class="login-hint"><b>Demo accounts</b><br>admin / admin123<br>manager / manager123<br>cashier / cashier123<br>storekeeper / store123</div><div style="text-align:center;color:#9aa6b2;font-size:10px;margin-top:18px">Demo login only · Do not use real passwords</div></div></section>
+<div class="app" id="appShell">
 <aside class="sidebar">
  <div class="brand"><div class="brandmark">U</div><div><b>UBUBIKO SMART</b><small>INVENTORY MANAGEMENT</small></div></div>
  <div class="navlabel">Main menu</div>
@@ -47,7 +51,7 @@ button,input,select{font:inherit}button{cursor:pointer;border:0}
  <div class="sidebar-foot">UBUBIKO SMART · DEMO<br>Presentation edition</div>
 </aside>
 <main class="main">
- <header class="topbar"><div class="crumb" id="crumb">Incamake y'ububiko</div><div class="topright"><span class="pill">● DEMO MODE</span><button class="ghost" id="langBtn">RW</button><button class="ghost" id="themeBtn">◐</button><div class="avatar" id="userAvatar">A</div></div></header>
+ <header class="topbar"><div class="crumb" id="crumb">Incamake y'ububiko</div><div class="topright"><span class="pill">● DEMO MODE</span><button class="ghost" id="langBtn">RW</button><button class="ghost" id="themeBtn">◐</button><div class="avatar" id="userAvatar">A</div><button class="logout-btn" id="logoutBtn" onclick="logout()">↪ Logout</button></div></header>
  <section class="content">
   <div class="demo-note">⚠ <b>LOCAL DEMO:</b> Data is stored only in this browser. Demo roles and permissions are not production-grade security.</div>
   <div id="page"></div>
@@ -80,14 +84,17 @@ const initial={
 };
 let db;try{db=JSON.parse(localStorage.getItem("ububikoDemoData"))||JSON.parse(JSON.stringify(initial));if(!db.products||!db.movements)db=JSON.parse(JSON.stringify(initial))}catch(e){db=JSON.parse(JSON.stringify(initial))}
 let current="dashboard", lang="rw", modalConfig=null;
-let activeUser;try{activeUser=JSON.parse(localStorage.getItem("ububikoActiveUser")||"null")}catch(e){activeUser=null}activeUser=activeUser&&["Admin","Store Manager","Cashier","Storekeeper"].includes(activeUser.role)?activeUser:{name:"System Admin",role:"Admin"};
+let activeUser=null;try{activeUser=JSON.parse(sessionStorage.getItem("ububikoActiveUser")||"null")}catch(e){activeUser=null}if(activeUser&&(!activeUser.name||!["Admin","Store Manager","Cashier","Storekeeper"].includes(activeUser.role)))activeUser=null;
+const demoAccounts=[{username:"admin",password:"admin123",name:"System Admin",role:"Admin"},{username:"manager",password:"manager123",name:"Store Manager",role:"Store Manager"},{username:"cashier",password:"cashier123",name:"Cashier User",role:"Cashier"},{username:"storekeeper",password:"store123",name:"Storekeeper User",role:"Storekeeper"}];
 let auditLog;try{auditLog=JSON.parse(localStorage.getItem("ububikoAudit")||"[]")}catch(e){auditLog=[]}if(!Array.isArray(auditLog))auditLog=[];
 const roles=["Admin","Store Manager","Cashier","Storekeeper"];
 const permissions={Admin:["*"],"Store Manager":["dashboard","products","stock","requests","returns","suppliers","customers","reports","assistant","audit"],Cashier:["dashboard","products","stock","customers","assistant"],Storekeeper:["dashboard","products","requests","returns","assistant"]};
 function allowed(action){return (permissions[activeUser.role]||[]).includes("*")||(permissions[activeUser.role]||[]).includes(action)}
 function guard(action){if(!allowed(action)){toast("Access denied: Admin permission required.");audit("BLOCKED",action);return false}return true}
 function audit(action,detail){auditLog.unshift({id:Date.now(),time:new Date().toLocaleString(),user:activeUser.name,role:activeUser.role,action,detail});auditLog=auditLog.slice(0,200);localStorage.setItem("ububikoAudit",JSON.stringify(auditLog))}
-function setUser(name,role){if(!guard("admin"))return;activeUser={name,role};localStorage.setItem("ububikoActiveUser",JSON.stringify(activeUser));$("#userAvatar").textContent=name.charAt(0).toUpperCase();audit("LOGIN AS",role);render();toast("Active demo user: "+role)}
+function setUser(name,role){if(!guard("admin"))return;activeUser={name,role};sessionStorage.setItem("ububikoActiveUser",JSON.stringify(activeUser));$("#userAvatar").textContent=name.charAt(0).toUpperCase();audit("SWITCH DEMO ROLE",role);render();toast("Active demo user: "+role)}
+function showAuthenticatedApp(){if(!activeUser){$("#loginScreen").style.display="grid";$("#appShell").style.display="none";return}$("#loginScreen").style.display="none";$("#appShell").style.display="flex";$("#userAvatar").textContent=activeUser.name.charAt(0).toUpperCase();render()}
+function logout(){if(activeUser)audit("LOGOUT","User signed out");sessionStorage.removeItem("ububikoActiveUser");activeUser=null;showAuthenticatedApp();$("#loginPassword").value="";$("#loginUsername").value="";toast("You have been logged out.")}
 const $=s=>document.querySelector(s), money=n=>Number(n||0).toLocaleString("en-US")+" RWF";
 function persist(){localStorage.setItem("ububikoDemoData",JSON.stringify(db))}
 function toast(msg){let t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
@@ -147,8 +154,8 @@ function resetDemo(){if(!guard("admin"))return;if(confirm("Restore original demo
 $("#themeBtn").onclick=()=>document.body.classList.toggle("dark");
 $("#langBtn").onclick=()=>{lang=lang==="rw"?"en":lang==="en"?"fr":"rw";$("#langBtn").textContent=lang.toUpperCase();render();toast(lang==="rw"?"Kinyarwanda":"Language: "+lang.toUpperCase())};
 $("#userAvatar").textContent=activeUser.name.charAt(0).toUpperCase();
-audit("SESSION START","Application opened");
-render();
+$("#loginForm").addEventListener("submit",e=>{e.preventDefault();const username=$("#loginUsername").value.trim().toLowerCase(),password=$("#loginPassword").value;const account=demoAccounts.find(a=>a.username===username&&a.password===password);if(!account){$("#loginError").style.display="block";auditLog.unshift({id:Date.now(),time:new Date().toLocaleString(),user:username||"Unknown",role:"Guest",action:"LOGIN FAILED",detail:"Invalid credentials"});localStorage.setItem("ububikoAudit",JSON.stringify(auditLog.slice(0,200)));return}activeUser={name:account.name,role:account.role};sessionStorage.setItem("ububikoActiveUser",JSON.stringify(activeUser));$("#loginError").style.display="none";audit("LOGIN","Successful sign in");showAuthenticatedApp();toast("Welcome, "+activeUser.name)}); 
+if(activeUser){audit("SESSION RESTORED","Active browser session");showAuthenticatedApp()}else{showAuthenticatedApp()}
 </script>
 </body>
 </html>
