@@ -85,7 +85,7 @@ const initial={
 function cloneInitial(){return JSON.parse(JSON.stringify(initial))}
 function loadDemoData(){const stored=JSON.parse(localStorage.getItem("ububikoDemoData")||"null");if(!stored||typeof stored!=="object"||Array.isArray(stored))return cloneInitial();return Object.fromEntries(Object.keys(initial).map(key=>[key,Array.isArray(stored[key])?stored[key].filter(item=>item&&typeof item==="object"&&!Array.isArray(item)):cloneInitial()[key]]))}
 let db;try{db=loadDemoData()}catch(e){db=cloneInitial()}
-let current="dashboard", lang="rw", modalConfig=null;
+let current="dashboard", lang=localStorage.getItem("ububikoLanguage")||"rw", modalConfig=null; if(!["rw","en","fr"].includes(lang))lang="rw";
 let activeUser=null;try{activeUser=JSON.parse(sessionStorage.getItem("ububikoActiveUser")||"null")}catch(e){activeUser=null}if(activeUser&&(typeof activeUser.name!=="string"||!activeUser.name.trim()||!["Admin","Store Manager","Cashier","Storekeeper"].includes(activeUser.role)))activeUser=null;
 const demoAccounts=[{username:"admin",password:"admin123",name:"System Admin",role:"Admin"},{username:"manager",password:"manager123",name:"Store Manager",role:"Store Manager"},{username:"cashier",password:"cashier123",name:"Cashier User",role:"Cashier"},{username:"storekeeper",password:"store123",name:"Storekeeper User",role:"Storekeeper"}];
 let auditLog;try{auditLog=JSON.parse(localStorage.getItem("ububikoAudit")||"[]")}catch(e){auditLog=[]}if(!Array.isArray(auditLog))auditLog=[];
@@ -99,7 +99,7 @@ function showAuthenticatedApp(){if(!activeUser){$("#loginScreen").style.display=
 function logout(){if(activeUser)audit("LOGOUT","User signed out");sessionStorage.removeItem("ububikoActiveUser");activeUser=null;showAuthenticatedApp();$("#loginPassword").value="";$("#loginUsername").value="";toast("You have been logged out.")}
 const $=s=>document.querySelector(s), money=n=>{const value=Number(n);return (Number.isFinite(value)?value:0).toLocaleString("en-US")+" RWF"};
 function persist(){localStorage.setItem("ububikoDemoData",JSON.stringify(db))}
-function toast(msg){let t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
+function toast(msg){let t=$("#toast");t.textContent=translateText(msg);t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
 const labels={dashboard:"Incamake y'ububiko",products:"Ibicuruzwa",stock:"Stock movements",requests:"Stock requests",returns:"Returns",suppliers:"Suppliers",customers:"Customers",reports:"Reports",settings:"Settings",admin:"Admin & Users",audit:"Audit log",assistant:"Stock AI Assistant"};
 function go(p){if(!guard(p))return;current=p;$("#crumb").textContent=labels[p]||p;render()}
 $("#nav").addEventListener("click",e=>{let b=e.target.closest("button[data-page]");if(b)go(b.dataset.page)});
@@ -124,7 +124,7 @@ const configs={
 function listPage(p){let c=configs[p],rows=c.data().map(r=>`<tr>${c.render(r).map(v=>`<td>${v}</td>`).join("")}${c.cols.includes("Actions")?`<td><div class="actions">${c.extra?c.extra(r):""}<button class="btn danger small" onclick="removeRow('${p}',${Number(r.id)||0})">Delete</button></div></td>`:""}</tr>`).join("");
 return pageHead(c.title,c.desc,`<button class="btn gold" onclick="openAdd('${p}')">${c.add}</button>`)+`<div class="toolbar"><input class="search" id="filter" aria-label="Search ${c.title}" placeholder="Search ${c.title.toLowerCase()}..." oninput="filterRows()"><small style="color:var(--muted)">${c.data().length} records</small></div><div id="tableArea">${table(c.cols,rows)}</div>`}
 function reports(){let total=db.products.reduce((s,p)=>s+p.qty*p.price,0),low=db.products.filter(p=>p.qty<=p.min);return pageHead("Reports","A quick summary of inventory performance.")+`<div class="stats">${stat("Total products",db.products.length,"Registered products","PR")}${stat("Stock valuation",money(total),"Purchase-price estimate","RW")}${stat("Low stock items",low.length,"Need attention","!")}${stat("Stock movements",db.movements.length,"Recorded transactions","ST")}</div><div class="panel"><div class="panelhead"><h3>Inventory valuation</h3><button class="btn gold small" onclick="window.print()">Print report</button></div>${table(["Product","Quantity","Unit price","Total value"],db.products.map(p=>`<tr><td>${escapeHTML(p.name)}</td><td>${Number(p.qty)||0} ${escapeHTML(p.unit)}</td><td>${money(p.price)}</td><td><b>${money(p.qty*p.price)}</b></td></tr>`).join(""))}</div>`}
-function settings(){return pageHead("Settings","Demo preferences and application information.")+`<div class="panel"><h3>System information</h3><p><b>Application:</b> UBUBIKO SMART</p><p><b>Mode:</b> Offline presentation demo</p><p><b>Database:</b> Browser local storage (sample data)</p><p><b>Language:</b> ${lang==="rw"?"Kinyarwanda interface labels":"English navigation"}</p><hr style="border:0;border-top:1px solid var(--line)"><button class="btn light" onclick="exportData()">Export demo data (JSON)</button> <button class="btn danger" onclick="resetDemo()">Reset demo data</button><p style="color:var(--muted);font-size:12px;margin-top:15px">Reset restores the original sample data. It does not affect any online database.</p></div>`}
+function settings(){return pageHead("Settings","Demo preferences and application information.")+`<div class="panel"><h3>System information</h3><p><b>Application:</b> UBUBIKO SMART</p><p><b>Mode:</b> Offline presentation demo</p><p><b>Database:</b> Browser local storage (sample data)</p><div class="field"><label for="languageSelect">Language / Ururimi / Langue</label><select id="languageSelect" onchange="changeLanguage(this.value)"><option value="rw" ${lang==="rw"?"selected":""}>Ikinyarwanda</option><option value="en" ${lang==="en"?"selected":""}>English</option><option value="fr" ${lang==="fr"?"selected":""}>Français</option></select></div><p><b>Language:</b> ${lang==="rw"?"Ikinyarwanda":lang==="en"?"English":"Français"}</p><hr style="border:0;border-top:1px solid var(--line)"><button class="btn light" onclick="exportData()">Export demo data (JSON)</button> <button class="btn danger" onclick="resetDemo()">Reset demo data</button><p style="color:var(--muted);font-size:12px;margin-top:15px">Reset restores the original sample data. It does not affect any online database.</p></div>`}
 
 
 
@@ -136,10 +136,131 @@ function escapeHTML(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':
 
 
 const translations={
- en:{"Incamake y'ububiko":"Inventory overview","Ibicuruzwa":"Products","Stock movements":"Stock movements","Stock requests":"Stock requests","Returns":"Returns","Suppliers":"Suppliers","Customers":"Customers","Reports":"Reports","Settings":"Settings","Admin & Users":"Admin & Users","Audit log":"Audit log","Stock AI Assistant":"Stock AI Assistant","Ongeramo igicuruzwa":"Add product","Agaciro ka stock":"Stock value","Stock iri hasi":"Low stock","Ibikorwa biheruka":"Recent activity","Ibyagurishijwe (demo)":"Sales (demo)","Nta makuru ahari.":"No records found.","Ongeramo":"Add","Muraho! Dore uko ububiko buhagaze uyu munsi.":"Welcome! Here is today's inventory overview.","Incamake y'ububiko":"Inventory overview","Ibikorwa biheruka":"Recent activity","Ibyinjira":"Stock IN","Ibyasohotse":"Stock OUT","Shakisha":"Search","Itariki":"Date","Izina ry'igicuruzwa":"Product name","Agaciro ka stock":"Stock value","Bibarwa ku giciro cyo kugura":"Calculated at purchase price","Bisaba kongerwamo stock":"Needs replenishment","Reba byose":"View all","Muraho!":"Welcome!","Ongeramo igicuruzwa":"Add product"},
- fr:{"Incamake y'ububiko":"Vue d'ensemble du stock","Ibicuruzwa":"Produits","Stock movements":"Mouvements de stock","Stock requests":"Demandes de stock","Returns":"Retours","Suppliers":"Fournisseurs","Customers":"Clients","Reports":"Rapports","Settings":"Paramètres","Admin & Users":"Administration et utilisateurs","Audit log":"Journal d'audit","Stock AI Assistant":"Assistant de stock","Ongeramo igicuruzwa":"Ajouter un produit","Agaciro ka stock":"Valeur du stock","Stock iri hasi":"Stock faible","Ibikorwa biheruka":"Activités récentes","Ibyagurishijwe (demo)":"Ventes (démo)","Nta makuru ahari.":"Aucun enregistrement.","Muraho! Dore uko ububiko buhagaze uyu munsi.":"Bienvenue ! Voici l'état du stock aujourd'hui.","Incamake y'ububiko":"Vue d'ensemble du stock","Ibikorwa biheruka":"Activités récentes","Ibyinjira":"Entrées de stock","Ibyasohotse":"Sorties de stock","Shakisha":"Rechercher","Itariki":"Date","Izina ry'igicuruzwa":"Nom du produit","Agaciro ka stock":"Valeur du stock","Bibarwa ku giciro cyo kugura":"Calculé au prix d'achat","Bisaba kongerwamo stock":"Réapprovisionnement nécessaire","Reba byose":"Tout voir","Muraho!":"Bienvenue !","Ongeramo igicuruzwa":"Ajouter un produit"}
+rw:{
+"INVENTORY MANAGEMENT":"IMICUNGIRE Y'UBUBIKO","Main menu":"Ibikorwa by'ingenzi","Business":"Imicungire y'ubucuruzi",
+"Stock movements":"Ibicuruzwa byinjiye n'iby asohotse","Stock requests":"Ubusabe bw'ibicuruzwa","Returns":"Ibicuruzwa byagaruwe",
+"Admin & Users":"Abayobozi n'abakozi","Audit log":"Amateka y'ibikorwa","Stock AI Assistant":"Umufasha w'ububiko",
+"Suppliers":"Abagemura ibicuruzwa","Customers":"Abakiriya","Reports":"Raporo","Settings":"Igenamiterere",
+"Welcome back":"Murakaza neza","Sign in to continue to your inventory dashboard.":"Injira kugira ngo ukomeze gucunga ububiko bwawe.",
+"Username":"Izina ryo kwinjiriraho","Password":"Ijambo ry'ibanga","Enter username":"Andika izina ryo kwinjiriraho",
+"Enter password":"Andika ijambo ry'ibanga","Sign in →":"Injira →","Incorrect username or password.":"Izina cyangwa ijambo ry'ibanga si byo.",
+"Demo accounts":"Konti zo kugerageza","Demo login only · Do not use real passwords":"Konti zo kugerageza gusa · Ntukoreshe amagambo y'ibanga nyayo",
+"DEMO MODE":"UBURYO BWO KUGERAGEZA","Logout":"Sohoka","LOCAL DEMO:":"IGERAGEZA RIKORERA KURI IKI GICURANGWA:",
+"Data is stored only in this browser. Demo roles and permissions are not production-grade security.":"Amakuru abikwa muri iyi browser gusa. Uburenganzira bwo muri demo si umutekano wizewe w'ubucuruzi.",
+"Presentation edition":"Verisiyo yo kwerekana","Incamake y'ububiko":"Incamake y'ububiko","Ibicuruzwa":"Ibicuruzwa",
+"Stock movements":"Ibicuruzwa byinjiye n'iby asohotse","Stock requests":"Ubusabe bw'ibicuruzwa","Returns":"Ibicuruzwa byagaruwe",
+"Add product":"Ongeramo igicuruzwa","Add new":"Ongeramo gishya","Cancel":"Kureka","Save":"Bika","Delete":"Siba",
+"Search":"Shakisha","Date":"Itariki","Product":"Igicuruzwa","Products":"Ibicuruzwa","Category":"Icyiciro","Unit":"Igipimo",
+"Quantity":"Ingano","Min. stock":"Ingano ntarengwa y'ibicuruzwa","Purchase price":"Igiciro cyo kugura",
+"Supplier":"Utanga ibicuruzwa","Supplier name":"Izina ry'utanga ibicuruzwa","Phone":"Telefoni","Email":"Imeyili",
+"Customer":"Umukiriya","Customer name":"Izina ry'umukiriya","Requested by":"Uwasabye","Status":"Imiterere",
+"Actions":"Ibikorwa","Reason":"Impamvu","Movement type":"Ubwoko bw'igikorwa","Description":"Ibisobanuro",
+"Stock IN":"Ibicuruzwa byinjiye","Stock OUT":"Ibicuruzwa byasohotse","IN":"Byinjiye","OUT":"Byasohotse",
+"Pending":"Birategereje","Approved":"Byemejwe","Rejected":"Byanzwe","Processed":"Byatanzwe",
+"Review and process requests from store staff.":"Suzuma kandi utunganye ubusabe bw'abakozi b'ububiko.",
+"Manage products, categories, quantities and prices.":"Cunga ibicuruzwa, ibyiciro, ingano n'ibiciro.",
+"Manage your product suppliers and their contact details.":"Cunga abagemura ibicuruzwa n'amakuru yabo yo kubavugisha.",
+"Manage customer information.":"Cunga amakuru y'abakiriya.","Record returned or damaged goods.":"Andika ibicuruzwa byagaruwe cyangwa byangiritse.",
+"Track stock coming into and leaving the store.":"Kurikirana ibicuruzwa byinjira n'ibisohoka mu bubiko.",
+"New request":"Saba ibicuruzwa","Add supplier":"Ongeramo utanga ibicuruzwa","Add customer":"Ongeramo umukiriya",
+"Record return":"Andika igicuruzwa cyagaruwe","Record movement":"Andika igikorwa cy'ibicuruzwa",
+"Total products":"Ibicuruzwa byose","Registered products":"Ibicuruzwa byanditswe","Stock valuation":"Agaciro k'ibicuruzwa",
+"Purchase-price estimate":"Agaciro kabazwe ku giciro cyo kugura","Low stock items":"Ibicuruzwa biri hafi gushira",
+"Need attention":"Bisaba kwitabwaho","Stock movements":"Ibikorwa by'ibicuruzwa","Recorded transactions":"Ibikorwa byanditswe",
+"Recent activity":"Ibikorwa biheruka","Inventory valuation":"Agaciro k'ububiko","Print report":"Capisha raporo",
+"System information":"Amakuru ya sisitemu","Application:":"Porogaramu:","Mode:":"Uburyo:","Database:":"Ububiko bw'amakuru:",
+"Language:":"Ururimi:","Kinyarwanda interface labels":"Imigaragarire y'Ikinyarwanda","English navigation":"Imigaragarire y'Icyongereza",
+"Export demo data (JSON)":"Ohereza amakuru ya demo (JSON)","Reset demo data":"Subizaho amakuru ya demo",
+"Reset restores the original sample data. It does not affect any online database.":"Gusubizaho bisubura amakuru y'icyitegererezo. Nta bubiko bw'amakuru bwo kuri internet bigira icyo bihinduraho.",
+"Admin control center":"Aho umuyobozi acungira sisitemu","Manage demo users, roles and access permissions.":"Cunga abakoresha ba demo, inshingano n'uburenganzira bwo gukoresha sisitemu.",
+"Current session":"Konti iri gukoresha sisitemu","Switch demo user (simulation only)":"Hindura umukoresha wa demo (igerageza gusa)",
+"Display name":"Izina rigaragara","Apply role":"Emeza inshingano","Role permissions":"Uburenganzira bw'inshingano",
+"Full demo access":"Uburenganzira bwose muri demo","Full access":"Uburenganzira bwose","Restricted":"Bufite aho bugarukira",
+"Audit log":"Amateka y'ibikorwa","Recent actions and blocked permission attempts.":"Ibikorwa biheruka n'ibigeragezo byabujijwe kubera kubura uburenganzira.",
+"Time":"Igihe","User":"Umukoresha","Role":"Inshingano","Action":"Igikorwa","Details":"Ibisobanuro",
+"Ask questions about stock, products, requests, returns and reports.":"Baza ibibazo ku bubiko, ibicuruzwa, ubusabe, ibyagejejwe n'ibisubizwa na raporo.",
+"Ask about stock, low inventory, value, requests...":"Baza ku bubiko, ibicuruzwa bike, agaciro kabyo cyangwa ubusabe...",
+"Send":"Ohereza","Welcome! Here is today's inventory overview.":"Murakaza neza! Dore uko ububiko buhagaze uyu munsi.",
+"Inventory overview":"Incamake y'ububiko","No records found.":"Nta makuru ahari.","View all":"Reba byose",
+"Needs replenishment":"Bisaba kongerwamo ibicuruzwa","Calculated at purchase price":"Bibazwe hakurikijwe igiciro cyo kugura",
+"Add item":"Ongeramo ikintu","Select":"Hitamo","Save successfully in this demo.":"Amakuru yabitswe muri iyi demo.",
+"Delete this demo record?":"Urashaka gusiba aya makuru yo muri demo?","Record deleted from demo.":"Aya makuru yasibwe muri demo.",
+"Request approved.":"Ubusabe bwemejwe.","This request has already been processed.":"Ubu busabe bwamaze gutunganywa.",
+"Access denied: insufficient role permissions.":"Wangiwe: nta burenganzira buhagije ufite.",
+"Choose a valid demo role.":"Hitamo inshingano yemewe muri demo.","Please complete all required fields.":"Uzuza ibisabwa byose.",
+"Enter a valid non-negative whole number.":"Andika umubare wuzuye kandi utari munsi ya zeru.",
+"Not enough stock for this OUT movement.":"Nta bicuruzwa bihagije bihari kugira ngo bisohoke.",
+"Select a product from the inventory list.":"Hitamo igicuruzwa kiri ku rutonde rw'ububiko.",
+"Restore original demo data? Your local demo changes will be lost.":"Subizaho amakuru ya mbere? Impinduka wakoze muri demo zizabura.",
+"Demo data restored.":"Amakuru ya demo yasubijweho.","You have been logged out.":"Wasohotse muri konti.",
+"Welcome, ":"Murakaza neza, ","Language: ":"Ururimi: ","Add product":"Ongeramo igicuruzwa",
+"System Admin":"Umuyobozi wa sisitemu","Store Manager":"Umuyobozi w'ububiko","Cashier":"Ushinzwe kwakira no kwishyurisha",
+"Storekeeper":"Ushinzwe ububiko","Admin":"Umuyobozi mukuru","Inventory Management":"Imicungire y'ububiko",
+"Sales (demo)":"Ibyagurishijwe (demo)","No products are currently below their minimum stock level.":"Nta bicuruzwa biri munsi y'ingano ntarengwa yabyo.",
+"Current inventory purchase value is ":"Agaciro k'ibicuruzwa biri mu bubiko ni "," across ":" mu bicuruzwa ",
+" products.":" byose.","There are ":"Hari "," low-stock products: ":" ibicuruzwa biri hafi gushira: ",
+" left; minimum ":" bisigaye; ingano ntarengwa ni ","Stock requests: ":"Ubusabe bw'ibicuruzwa: "," total; ":" bwose; ",
+" pending and ":" burategereje kandi "," approved.":" bwar eme jwe.","Recorded stock movements: ":"Ibikorwa by'ibicuruzwa byanditswe: ",
+" (":" ("," IN and ":" byinjiye na "," OUT).":" byasohotse).","There are ":"Hari "," recorded returns.":" ibicuruzwa byagaruwe byanditswe."
+},
+en:{
+"INVENTORY MANAGEMENT":"INVENTORY MANAGEMENT","Main menu":"Main menu","Business":"Business",
+"Stock movements":"Stock movements","Stock requests":"Stock requests","Returns":"Returns","Admin & Users":"Admin & Users",
+"Audit log":"Audit log","Stock AI Assistant":"Stock AI Assistant","Suppliers":"Suppliers","Customers":"Customers","Reports":"Reports","Settings":"Settings",
+"Welcome back":"Welcome back","Murakaza neza":"Welcome","Incamake y'ububiko":"Inventory overview","Ibicuruzwa":"Products",
+"Ibicuruzwa byinjiye n'iby asohotse":"Stock movements","Ubusabe bw'ibicuruzwa":"Stock requests","Ibicuruzwa byagaruwe":"Returns",
+"Abayobozi n'abakozi":"Admin & Users","Amateka y'ibikorwa":"Audit log","Umufasha w'ububiko":"Stock AI Assistant",
+"Abagemura ibicuruzwa":"Suppliers","Abakiriya":"Customers","Raporo":"Reports","Igenamiterere":"Settings",
+"Umuyobozi mukuru":"Admin","Umuyobozi w'ububiko":"Store Manager","Ushinzwe kwakira no kwishyurisha":"Cashier","Ushinzwe ububiko":"Storekeeper",
+"Byemejwe":"Approved","Byanzwe":"Rejected","Byatanzwe":"Processed","Birategereje":"Pending",
+"Yinjira":"IN","Byinjiye":"IN","Byasohotse":"OUT","Ongeramo igicuruzwa":"Add product","Shakisha":"Search",
+"Agaciro ka stock":"Stock value","Stock iri hasi":"Low stock","Ibikorwa biheruka":"Recent activity","Nta makuru ahari.":"No records found.",
+"Reba byose":"View all","Ibyinjira":"Stock IN","Ibyasohotse":"Stock OUT","Itariki":"Date","Izina ry'igicuruzwa":"Product name",
+"Uwasabye":"Requested by","Ingano":"Quantity","Ibisobanuro":"Description","Igicuruzwa":"Product","Icyiciro":"Category",
+"Telefoni":"Phone","Imeyili":"Email","Impamvu":"Reason","Ibikorwa":"Actions","Injira →":"Sign in →","Sohoka":"Logout",
+"Murakaza neza! Dore uko ububiko buhagaze uyu munsi.":"Welcome! Here is today's inventory overview."
+},
+fr:{
+"INVENTORY MANAGEMENT":"GESTION DES STOCKS","Main menu":"Menu principal","Business":"Gestion commerciale",
+"Stock movements":"Mouvements de stock","Stock requests":"Demandes de stock","Returns":"Retours","Admin & Users":"Administration et utilisateurs",
+"Audit log":"Journal des activités","Stock AI Assistant":"Assistant intelligent de stock","Suppliers":"Fournisseurs","Customers":"Clients","Reports":"Rapports","Settings":"Paramètres",
+"Welcome back":"Bon retour","Incamake y'ububiko":"Vue d'ensemble du stock","Ibicuruzwa":"Produits",
+"Ibicuruzwa byinjiye n'iby asohotse":"Mouvements de stock","Ubusabe bw'ibicuruzwa":"Demandes de stock","Ibicuruzwa byagaruwe":"Produits retournés",
+"Abayobozi n'abakozi":"Administration et utilisateurs","Amateka y'ibikorwa":"Journal des activités","Umufasha w'ububiko":"Assistant intelligent de stock",
+"Abagemura ibicuruzwa":"Fournisseurs","Abakiriya":"Clients","Raporo":"Rapports","Igenamiterere":"Paramètres",
+"Umuyobozi mukuru":"Administrateur","Umuyobozi w'ububiko":"Responsable du stock","Ushinzwe kwakira no kwishyurisha":"Caissier","Ushinzwe ububiko":"Magasinier",
+"Byemejwe":"Approuvé","Byanzwe":"Refusé","Byatanzwe":"Traité","Birategereje":"En attente",
+"Ongeramo igicuruzwa":"Ajouter un produit","Shakisha":"Rechercher","Agaciro ka stock":"Valeur du stock","Stock iri hasi":"Stock faible",
+"Ibikorwa biheruka":"Activités récentes","Nta makuru ahari.":"Aucun enregistrement.","Reba byose":"Tout voir",
+"Ibyinjira":"Entrées de stock","Ibyasohotse":"Sorties de stock","Itariki":"Date","Izina ry'igicuruzwa":"Nom du produit",
+"Uwasabye":"Demandé par","Ingano":"Quantité","Ibisobanuro":"Description","Igicuruzwa":"Produit","Icyiciro":"Catégorie",
+"Telefoni":"Téléphone","Imeyili":"E-mail","Impamvu":"Motif","Ibikorwa":"Actions","Injira →":"Se connecter →","Sohoka":"Déconnexion",
+"Murakaza neza! Dore uko ububiko buhagaze uyu munsi.":"Bienvenue ! Voici l'état du stock aujourd'hui."
+}
 };
-function applyLanguage(){const dict=translations[lang];if(!dict)return;document.querySelectorAll('#nav .txt').forEach(el=>{const key=el.textContent.trim();if(dict[key])el.textContent=dict[key]});document.querySelectorAll('#crumb,.welcome h1,.welcome p,.stathead span,.panelhead h3,.empty').forEach(el=>{const key=el.textContent.trim();if(dict[key])el.textContent=dict[key]});}
+function translateText(value){
+ const dict=translations[lang]||{};
+ let out=String(value);
+ const keys=Object.keys(dict).sort((a,b)=>b.length-a.length);
+ for(const key of keys){if(out.includes(key))out=out.split(key).join(dict[key]);}
+ return out;
+}
+function applyLanguage(){
+ document.documentElement.lang=lang;
+ $("#langBtn").textContent=lang.toUpperCase();
+ const walker=document.createTreeWalker(document.querySelector("#appShell"),NodeFilter.SHOW_TEXT);
+ const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+ nodes.forEach(node=>{if(node.nodeValue.trim())node.nodeValue=translateText(node.nodeValue)});
+ document.querySelectorAll("#appShell [placeholder],#appShell [aria-label],#appShell [title],#appShell input[type=button],#appShell input[type=submit]").forEach(el=>{
+  ["placeholder","aria-label","title","value"].forEach(attr=>{if(el.hasAttribute(attr))el.setAttribute(attr,translateText(el.getAttribute(attr)))});
+ });
+}
+function changeLanguage(next){
+ if(!["rw","en","fr"].includes(next))return;
+ lang=next;localStorage.setItem("ububikoLanguage",lang);
+ render();toast(lang==="rw"?"Ururimi rwahinduwe: Ikinyarwanda":lang==="en"?"Language changed: English":"Langue modifiée : Français");
+}
+
 
 function render(){if(!activeUser)return;if(!allowed(current))current="dashboard";$("#crumb").textContent=labels[current]||current;document.querySelectorAll("#nav button").forEach(b=>{const permitted=allowed(b.dataset.page);b.hidden=!permitted;b.classList.toggle("active",b.dataset.page===current);if(b.dataset.page===current)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});let p=$("#page");if(current==="dashboard")p.innerHTML=dashboard();else if(configs[current])p.innerHTML=listPage(current);else if(current==="reports")p.innerHTML=reports();else if(current==="admin")p.innerHTML=adminPage();else if(current==="audit")p.innerHTML=auditPage();else if(current==="assistant")p.innerHTML=assistantPage();else p.innerHTML=settings();applyLanguage()}
 function openAdd(p){const c=configs[p];if(!c||!guard(p))return;const now=new Date(),today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;modalConfig=p;$("#modalTitle").textContent=c.title+" — Add new";$("#modalFields").innerHTML=c.fields.map(f=>{const id=`field-${p}-${f[0]}`,label=`<label for="${id}">${escapeHTML(f[1])}</label>`;if(f[2]==="select"){const options=typeof f[3]==="function"?f[3]():f[3];return `<div class="field">${label}<select id="${id}" name="${f[0]}" required><option value="" disabled selected>Select ${escapeHTML(f[1].toLowerCase())}</option>${options.map(x=>`<option value="${escapeHTML(x)}">${escapeHTML(x)}</option>`).join("")}</select></div>`}const constraint=f[2]==="number"?`min="${f[0]==="qty"?"1":"0"}" step="1"`:"",defaultValue=f[2]==="date"?`value="${today}"`:"";return `<div class="field">${label}<input id="${id}" name="${f[0]}" type="${f[2]}" ${constraint} ${defaultValue} required></div>`}).join("");$("#modalback").classList.add("show");$("#modalFields input, #modalFields select")?.focus()}
@@ -157,7 +278,7 @@ function filterRows(){let q=$("#filter").value.toLowerCase();document.querySelec
 function exportData(){const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="ububiko-smart-demo-data.json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function resetDemo(){if(!guard("admin"))return;if(confirm("Restore original demo data? Your local demo changes will be lost.")){db=JSON.parse(JSON.stringify(initial));audit("RESET","Demo data restored");persist();render();toast("Demo data restored.")}}
 $("#themeBtn").onclick=()=>{document.body.classList.toggle("dark");$("#themeBtn").setAttribute("aria-pressed",String(document.body.classList.contains("dark")))};
-$("#langBtn").onclick=()=>{lang=lang==="rw"?"en":lang==="en"?"fr":"rw";document.documentElement.lang=lang;$("#langBtn").textContent=lang.toUpperCase();render();toast(lang==="rw"?"Kinyarwanda":"Language: "+lang.toUpperCase())};
+$("#langBtn").onclick=()=>changeLanguage(lang==="rw"?"en":lang==="en"?"fr":"rw");
 $("#loginForm").addEventListener("submit",e=>{e.preventDefault();const username=$("#loginUsername").value.trim().toLowerCase(),password=$("#loginPassword").value;const account=demoAccounts.find(a=>a.username===username&&a.password===password);if(!account){$("#loginError").style.display="block";auditLog.unshift({id:Date.now(),time:new Date().toLocaleString(),user:username||"Unknown",role:"Guest",action:"LOGIN FAILED",detail:"Invalid credentials"});localStorage.setItem("ububikoAudit",JSON.stringify(auditLog.slice(0,200)));return}activeUser={name:account.name,role:account.role};sessionStorage.setItem("ububikoActiveUser",JSON.stringify(activeUser));$("#loginError").style.display="none";audit("LOGIN","Successful sign in");showAuthenticatedApp();toast("Welcome, "+activeUser.name)}); 
 if(activeUser){audit("SESSION RESTORED","Active browser session");showAuthenticatedApp()}else{showAuthenticatedApp()}
 </script>
