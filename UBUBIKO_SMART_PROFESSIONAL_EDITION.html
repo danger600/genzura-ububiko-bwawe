@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UBUBIKO SMART — Kigali API Edition</title>
+<title>UBUBIKO SMART — Professional Edition</title>
 <style>
 :root{--navy:#10243a;--navy2:#173650;--gold:#d8ad52;--bg:#f3f6fa;--card:#fff;--text:#172638;--muted:#718096;--line:#e5eaf0;--green:#16845b;--red:#c64d4d;--blue:#3778b8;--shadow:0 8px 24px rgba(16,36,58,.07)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Inter,Segoe UI,Arial,sans-serif}
@@ -21,23 +21,6 @@ button,input,select{font:inherit}button{cursor:pointer;border:0}
 @media(max-width:900px){.sidebar{width:205px}.stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
 @media(max-width:620px){.sidebar{width:65px;padding:15px 7px}.brand{padding:0 5px 18px}.brand b,.brand small,.navlabel,.nav button .txt,.sidebar-foot{display:none}.brandmark{width:42px}.nav button{justify-content:center;padding:12px 4px}.nav .ico{font-size:18px}.topbar{padding:0 14px}.content{padding:20px 13px}.welcome{align-items:flex-start;flex-direction:column}.welcome h1{font-size:22px}.stats{gap:9px}.stat{padding:13px}.stat strong{font-size:21px}.toolbar{align-items:stretch;flex-direction:column}.search{width:100%}}
 
-.api-intro{background:linear-gradient(120deg,#10243a,#1b4965);color:#fff;border-radius:14px;padding:20px;margin:0 0 18px}
-.api-intro h2{margin:0 0 6px;font-size:20px}.api-intro p{margin:0;color:#d3e0e9;font-size:12px}
-.api-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0}
-.api-mini{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px}.api-mini b{display:block;font-size:21px;color:var(--navy)}.dark .api-mini b{color:#fff}.api-mini small{color:var(--muted)}
-.api-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
-.api-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px;min-width:0}
-.api-card-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.api-card h3{margin:0;color:var(--navy);font-size:14px}.dark .api-card h3{color:#e6edf4}
-.api-card p{font-size:11px;color:var(--muted);min-height:32px;margin:7px 0}
-.api-chip{font-size:9px;font-weight:800;border-radius:20px;padding:4px 7px;background:#e8f7ef;color:#16845b;white-space:nowrap}
-.api-chip.key{background:#fff4dc;color:#9a6a13}.api-chip.media{background:#e8f0ff;color:#3568a8}
-.api-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.api-result{margin-top:10px;padding:9px;border-radius:8px;background:#f4f7fa;color:#42576a;font-size:10px;overflow-wrap:anywhere;max-height:105px;overflow:auto;white-space:pre-wrap}
-.dark .api-result{background:#223548;color:#d6e1eb}
-.api-key{width:100%;padding:8px;border:1px solid var(--line);border-radius:7px;margin:8px 0;font-size:11px;background:var(--card);color:var(--text)}
-.api-filter{display:flex;gap:9px;margin:15px 0;flex-wrap:wrap}.api-filter input{flex:1;min-width:200px}
-.api-disclaimer{font-size:11px;color:var(--muted);line-height:1.6;margin-top:16px}
-.api-state{font-weight:800;font-size:10px;color:var(--muted)}
-@media(max-width:800px){.api-summary{grid-template-columns:repeat(2,1fr)}.api-grid{grid-template-columns:1fr}}
 
 </style>
 </head>
@@ -53,18 +36,20 @@ button,input,select{font:inherit}button{cursor:pointer;border:0}
   <button data-page="requests"><span class="ico">☷</span><span class="txt">Stock requests</span></button>
   <button data-page="returns"><span class="ico">↩</span><span class="txt">Returns</span></button>
   <div class="navlabel">Business</div>
+  <button data-page="admin"><span class="ico">♙</span><span class="txt">Admin & Users</span></button>
+  <button data-page="audit"><span class="ico">▤</span><span class="txt">Audit log</span></button>
+  <button data-page="assistant"><span class="ico">✦</span><span class="txt">Stock AI Assistant</span></button>
   <button data-page="suppliers"><span class="ico">♧</span><span class="txt">Suppliers</span></button>
   <button data-page="customers"><span class="ico">♙</span><span class="txt">Customers</span></button>
-  <button data-page="apis"><span class="ico">⌘</span><span class="txt">API Integrations · 30</span></button>
   <button data-page="reports"><span class="ico">▤</span><span class="txt">Reports</span></button>
   <button data-page="settings"><span class="ico">⚙</span><span class="txt">Settings</span></button>
  </nav>
  <div class="sidebar-foot">UBUBIKO SMART · DEMO<br>Presentation edition</div>
 </aside>
 <main class="main">
- <header class="topbar"><div class="crumb" id="crumb">Incamake y'ububiko</div><div class="topright"><span class="pill">● DEMO MODE</span><button class="ghost" id="langBtn">EN</button><button class="ghost" id="themeBtn">◐</button><div class="avatar">A</div></div></header>
+ <header class="topbar"><div class="crumb" id="crumb">Incamake y'ububiko</div><div class="topright"><span class="pill">● DEMO MODE</span><button class="ghost" id="langBtn">RW</button><button class="ghost" id="themeBtn">◐</button><div class="avatar" id="userAvatar">A</div></div></header>
  <section class="content">
-  <div class="demo-note">⚠ <b>Presentation demo:</b> Sample data only. Local demo changes stay in this browser. API connectors fetch public or configured third-party data.</div>
+  <div class="demo-note">⚠ <b>LOCAL DEMO:</b> Data is stored only in this browser. Demo roles and permissions are not production-grade security.</div>
   <div id="page"></div>
   <div class="footer">Developed by <b>Remmy | L5 SWD</b> · @tigernsanz · UBUBIKO SMART</div>
  </section>
@@ -93,13 +78,21 @@ const initial={
  suppliers:[{id:1,name:"Kigali Wholesale",phone:"0788001122",email:"sales@kigali.example"},{id:2,name:"Rwanda Foods Ltd",phone:"0788112233",email:"info@foods.example"}],
  customers:[{id:1,name:"Diane Uwase",phone:"0788123456",email:"diane@example.com"},{id:2,name:"Jean Claude",phone:"0788234567",email:"jean@example.com"}]
 };
-let db;try{db=JSON.parse(localStorage.getItem("ububikoDemoData"))||initial}catch(e){db=initial}
+let db;try{db=JSON.parse(localStorage.getItem("ububikoDemoData"))||JSON.parse(JSON.stringify(initial));if(!db.products||!db.movements)db=JSON.parse(JSON.stringify(initial))}catch(e){db=JSON.parse(JSON.stringify(initial))}
 let current="dashboard", lang="rw", modalConfig=null;
+let activeUser;try{activeUser=JSON.parse(localStorage.getItem("ububikoActiveUser")||"null")}catch(e){activeUser=null}activeUser=activeUser&&["Admin","Store Manager","Cashier","Storekeeper"].includes(activeUser.role)?activeUser:{name:"System Admin",role:"Admin"};
+let auditLog;try{auditLog=JSON.parse(localStorage.getItem("ububikoAudit")||"[]")}catch(e){auditLog=[]}if(!Array.isArray(auditLog))auditLog=[];
+const roles=["Admin","Store Manager","Cashier","Storekeeper"];
+const permissions={Admin:["*"],"Store Manager":["dashboard","products","stock","requests","returns","suppliers","customers","reports","assistant","audit"],Cashier:["dashboard","products","stock","customers","assistant"],Storekeeper:["dashboard","products","requests","returns","assistant"]};
+function allowed(action){return (permissions[activeUser.role]||[]).includes("*")||(permissions[activeUser.role]||[]).includes(action)}
+function guard(action){if(!allowed(action)){toast("Access denied: Admin permission required.");audit("BLOCKED",action);return false}return true}
+function audit(action,detail){auditLog.unshift({id:Date.now(),time:new Date().toLocaleString(),user:activeUser.name,role:activeUser.role,action,detail});auditLog=auditLog.slice(0,200);localStorage.setItem("ububikoAudit",JSON.stringify(auditLog))}
+function setUser(name,role){if(!guard("admin"))return;activeUser={name,role};localStorage.setItem("ububikoActiveUser",JSON.stringify(activeUser));$("#userAvatar").textContent=name.charAt(0).toUpperCase();audit("LOGIN AS",role);render();toast("Active demo user: "+role)}
 const $=s=>document.querySelector(s), money=n=>Number(n||0).toLocaleString("en-US")+" RWF";
 function persist(){localStorage.setItem("ububikoDemoData",JSON.stringify(db))}
 function toast(msg){let t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
-const labels={dashboard:"Incamake y'ububiko",products:"Ibicuruzwa",stock:"Stock movements",requests:"Stock requests",returns:"Returns",suppliers:"Suppliers",customers:"Customers",reports:"Reports",settings:"Settings",apis:"API Integrations · 30"};
-function go(p){current=p;document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===p));$("#crumb").textContent=labels[p]||p;render()}
+const labels={dashboard:"Incamake y'ububiko",products:"Ibicuruzwa",stock:"Stock movements",requests:"Stock requests",returns:"Returns",suppliers:"Suppliers",customers:"Customers",reports:"Reports",settings:"Settings",admin:"Admin & Users",audit:"Audit log",assistant:"Stock AI Assistant"};
+function go(p){if(p==="admin"&&!guard("admin"))return;current=p;document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===p));$("#crumb").textContent=labels[p]||p;render()}
 $("#nav").addEventListener("click",e=>{let b=e.target.closest("button[data-page]");if(b)go(b.dataset.page)});
 function pageHead(title,desc,action){return `<div class="welcome"><div><div class="eyebrow">UBUBIKO SMART · DEMO</div><h1>${title}</h1><p>${desc}</p></div>${action||""}</div>`}
 function stat(title,value,sub,ico){return `<div class="stat"><div class="stathead"><span>${title}</span><span class="staticon">${ico}</span></div><strong>${value}</strong><small>${sub}</small></div>`}
@@ -124,125 +117,37 @@ return pageHead(c.title,c.desc,`<button class="btn gold" onclick="openAdd('${p}'
 function reports(){let total=db.products.reduce((s,p)=>s+p.qty*p.price,0),low=db.products.filter(p=>p.qty<=p.min);return pageHead("Reports","A quick summary of inventory performance.")+`<div class="stats">${stat("Total products",db.products.length,"Registered products","▣")}${stat("Stock valuation",money(total),"Purchase-price estimate","◈")}${stat("Low stock items",low.length,"Need attention","!")}${stat("Stock movements",db.movements.length,"Recorded transactions","⇄")}</div><div class="panel"><div class="panelhead"><h3>Inventory valuation</h3><button class="btn gold small" onclick="window.print()">Print report</button></div>${table(["Product","Quantity","Unit price","Total value"],db.products.map(p=>`<tr><td>${p.name}</td><td>${p.qty} ${p.unit}</td><td>${money(p.price)}</td><td><b>${money(p.qty*p.price)}</b></td></tr>`).join(""))}</div>`}
 function settings(){return pageHead("Settings","Demo preferences and application information.")+`<div class="panel"><h3>System information</h3><p><b>Application:</b> UBUBIKO SMART</p><p><b>Mode:</b> Offline presentation demo</p><p><b>Database:</b> Browser local storage (sample data)</p><p><b>Language:</b> ${lang==="rw"?"Kinyarwanda interface labels":"English navigation"}</p><hr style="border:0;border-top:1px solid var(--line)"><button class="btn light" onclick="exportData()">Export demo data (JSON)</button> <button class="btn danger" onclick="resetDemo()">Reset demo data</button><p style="color:var(--muted);font-size:12px;margin-top:15px">Reset restores the original sample data. It does not affect any online database.</p></div>`}
 
-const apiIntegrations = [
- {id:"dummy",name:"DummyJSON Products",group:"Products",kind:"free",desc:"Demo catalogue, prices, stock levels and product images.",url:"https://dummyjson.com/products?limit=12",mode:"json"},
- {id:"fake",name:"Fake Store API",group:"Products",kind:"free",desc:"Sample retail catalogue for testing product cards and search.",url:"https://fakestoreapi.com/products",mode:"json"},
- {id:"platzi",name:"Platzi Fake Store",group:"Products",kind:"free",desc:"Alternative sample catalogue and product categories.",url:"https://api.escuelajs.co/api/v1/products?offset=0&limit=10",mode:"json"},
- {id:"food",name:"Open Food Facts",group:"Products",kind:"free",desc:"Look up packaged food by barcode; coverage depends on community submissions.",url:"https://world.openfoodfacts.org/api/v2/product/3017620422003.json?fields=product_name,brands,quantity,code",mode:"json"},
- {id:"random",name:"Random User",group:"People",kind:"free",desc:"Generate sample staff/customer profiles. Not real customer records.",url:"https://randomuser.me/api/?results=3",mode:"json"},
- {id:"jsonplaceholder",name:"JSONPlaceholder",group:"Testing",kind:"free",desc:"Fake REST records for testing activity feeds and task lists.",url:"https://jsonplaceholder.typicode.com/posts?_limit=5",mode:"json"},
- {id:"countries",name:"REST Countries",group:"Reference",kind:"free",desc:"Country names, currency codes, flags and regional metadata.",url:"https://restcountries.com/v3.1/name/rwanda?fields=name,capital,currencies,flags,region",mode:"json"},
- {id:"weather",name:"Open-Meteo Weather",group:"Kigali",kind:"free",desc:"Current weather for Kigali using approximate city coordinates.",url:"https://api.open-meteo.com/v1/forecast?latitude=-1.9441&longitude=30.0619&current=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=Africa%2FKigali",mode:"json"},
- {id:"geocode",name:"Open-Meteo Geocoding",group:"Kigali",kind:"free",desc:"Convert a city name into coordinates for weather and delivery tools.",url:"https://geocoding-api.open-meteo.com/v1/search?name=Kigali&count=3&language=en&format=json",mode:"json"},
- {id:"frankfurter",name:"Frankfurter Exchange Rates",group:"Finance",kind:"free",desc:"Reference foreign-exchange rates. RWF may not be supported by the ECB source.",url:"https://api.frankfurter.dev/v1/latest?base=USD",mode:"json"},
- {id:"holidays",name:"Nager.Date Holidays",group:"Reference",kind:"free",desc:"Public holiday lookup; Rwanda availability depends on provider coverage.",url:"https://date.nager.at/api/v3/PublicHolidays/2026/RW",mode:"json"},
- {id:"nominatim",name:"OpenStreetMap Nominatim",group:"Kigali",kind:"free",desc:"Search for a Kigali address or place. Search only on submit; cache results.",url:"https://nominatim.openstreetmap.org/search?q=Kigali%2C%20Rwanda&format=json&limit=3",mode:"json"},
- {id:"overpass",name:"Overpass API",group:"Kigali",kind:"free",desc:"Query mapped shops, warehouses and amenities around Kigali; public servers can be busy.",url:"https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5Bshop%5D%28-1.99%2C30.02%2C-1.90%2C30.11%29%3Bout%205%3B",mode:"json"},
- {id:"osrm",name:"OSRM Routing",group:"Logistics",kind:"free",desc:"Estimate road route distance and duration between two Kigali coordinates.",url:"https://router.project-osrm.org/route/v1/driving/30.0619,-1.9441;30.0875,-1.9536?overview=false",mode:"json"},
- {id:"photon",name:"Photon Geocoder",group:"Kigali",kind:"free",desc:"Search geocoding service powered by OpenStreetMap data.",url:"https://photon.komoot.io/api/?q=Kigali%20Rwanda&limit=3",mode:"json"},
- {id:"bigdatacloud",name:"BigDataCloud Reverse Geocode",group:"Kigali",kind:"free",desc:"Resolve approximate Kigali coordinates into a readable locality.",url:"https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=-1.9441&longitude=30.0619&localityLanguage=en",mode:"json"},
- {id:"sunrise",name:"Sunrise-Sunset",group:"Kigali",kind:"free",desc:"Sunrise and sunset times for Kigali coordinates.",url:"https://api.sunrise-sunset.org/json?lat=-1.9441&lng=30.0619&formatted=0",mode:"json"},
- {id:"ipify",name:"ipify Public IP",group:"Network",kind:"free",desc:"Shows the public IP address used for this browser request; not a user identity.",url:"https://api.ipify.org?format=json",mode:"json"},
- {id:"worldtime",name:"WorldTimeAPI",group:"Reference",kind:"free",desc:"Timezone and local time for Africa/Kigali.",url:"https://worldtimeapi.org/api/timezone/Africa/Kigali",mode:"json"},
- {id:"sunrise2",name:"REST Countries Currency Metadata",group:"Finance",kind:"free",desc:"Get Rwanda's official currency metadata (RWF) from country reference data.",url:"https://restcountries.com/v3.1/alpha/rwa?fields=name,currencies",mode:"json"},
- {id:"qr",name:"QR Server",group:"Utilities",kind:"media",desc:"Generate a QR image for an item SKU or product URL.",url:"https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=UBUBIKO-SMART-SKU-001",mode:"image"},
- {id:"quickchart",name:"QuickChart",group:"Reports",kind:"media",desc:"Render a sample inventory chart image from a chart configuration.",url:"https://quickchart.io/chart?width=500&height=250&c=%7Btype%3A%27bar%27%2Cdata%3A%7Blabels%3A%5B%27Rice%27%2C%27Sugar%27%2C%27Soap%27%5D%2Cdatasets%3A%5B%7Blabel%3A%27Stock%27%2Cdata%3A%5B50%2C22%2C9%5D%7D%5D%7D%7D",mode:"image"},
- {id:"dicebear",name:"DiceBear Avatars",group:"People",kind:"media",desc:"Create a generated avatar for a staff demo profile.",url:"https://api.dicebear.com/9.x/initials/svg?seed=UBUBIKO%20ADMIN",mode:"image"},
- {id:"emailjs",name:"EmailJS",group:"Messaging",kind:"key",desc:"Send browser email using your EmailJS service/template/public key. Public key is visible to visitors.",url:"https://api.emailjs.com/api/v1.0/email/send",mode:"config",fields:["service_id","template_id","public_key"]},
- {id:"formspree",name:"Formspree",group:"Messaging",kind:"key",desc:"Submit a contact/feedback form using your own Formspree endpoint.",url:"",mode:"config",fields:["endpoint"]},
- {id:"sentry",name:"Sentry Monitoring",group:"Monitoring",kind:"key",desc:"Client-side error monitoring requires a Sentry project DSN and SDK. Configure only a browser-restricted public DSN.",url:"",mode:"config",fields:["dsn"]},
- {id:"geoapify",name:"Geoapify Places",group:"Kigali",kind:"key",desc:"Nearby places and address search; requires a restricted API key.",url:"https://api.geoapify.com/v2/places?categories=commercial,building&filter=circle:30.0619,-1.9441,5000&limit=5&apiKey=",mode:"keyurl",fields:["api_key"]},
- {id:"mapbox",name:"Mapbox Geocoding",group:"Logistics",kind:"key",desc:"Address search and map services; use a URL-restricted public token.",url:"https://api.mapbox.com/geocoding/v5/mapbox.places/Kigali.json?access_token=",mode:"keyurl",fields:["public_token"]},
- {id:"googleplaces",name:"Google Places",group:"Kigali",kind:"key",desc:"Business/place discovery requires Google Cloud billing and an appropriately restricted browser key; direct REST calls may be blocked by CORS.",url:"",mode:"config",fields:["browser_key"]},
- {id:"pexels",name:"Pexels Photos",group:"Media",kind:"key",desc:"Search product imagery. API key is exposed in browser code; restrict it and respect image licensing.",url:"https://api.pexels.com/v1/search?query=groceries&per_page=3",mode:"headerkey",fields:["api_key"]},
- {id:"unsplash",name:"Unsplash Photos",group:"Media",kind:"key",desc:"Search editorial/product imagery using a demo/public access key. Follow API attribution and hotlink rules.",url:"https://api.unsplash.com/search/photos?query=retail%20store&per_page=3",mode:"headerkey",fields:["access_key"]},
- {id:"barcode",name:"UPCitemdb",group:"Products",kind:"key",desc:"Barcode product lookup requires an API key or plan; quota and access depend on subscription.",url:"https://api.upcitemdb.com/prod/trial/lookup?upc=3017620422003",mode:"json"},
- {id:"quickchart2",name:"QuickChart QR / Label Rendering",group:"Utilities",kind:"media",desc:"Create a printable product label preview using a generated QR image.",url:"https://quickchart.io/qr?text=UBUBIKO-SMART&size=180",mode:"image"}
-];
 
-function apiPage(){
- const groups=[...new Set(apiIntegrations.map(x=>x.group))];
- return pageHead("API Integration Center","APIs 30 zateguwe: products, Kigali logistics, finance, weather, reports na messaging.")+
- `<div class="api-intro"><h2>UBUBIKO SMART · LIVE DATA CONNECTORS</h2><p>Gerageza buri integration. APIs zidakeneye key zikora ako kanya; izisaba key zigomba kubanza gushyirwamo credentials zawe.</p></div>
- <div class="api-summary">
-  <div class="api-mini"><b>30</b><small>API connectors</small></div>
-  <div class="api-mini"><b>20</b><small>Public / demo endpoints</small></div>
-  <div class="api-mini"><b>10</b><small>Key/config dependent</small></div>
-  <div class="api-mini"><b id="apiPassed">0</b><small>Tests completed this session</small></div>
- </div>
- <div class="api-filter"><input class="search" id="apiSearch" placeholder="Shakisha API, urugero: Kigali, products, weather..." oninput="filterApis()"><select class="search" id="apiGroup" onchange="filterApis()"><option value="">All categories</option>${groups.map(g=>`<option>${g}</option>`).join("")}</select></div>
- <div class="api-grid" id="apiGrid">${apiIntegrations.map(apiCard).join("")}</div>
- <div class="panel api-disclaimer"><b>Amabwiriza y'ingenzi:</b> Izi APIs ntabwo ari backend ya UBUBIKO SMART. Zimwe zitanga sample data gusa; ntabwo zivugurura stock y'abacuruzi nyabo. Browser-only ntishobora guhisha secret keys, kubika data hagati y'abakoresha benshi, cyangwa kwemeza payment mu mutekano. Koresha localStorage/IndexedDB ku makuru y'iyi browser gusa. APIs z'abandi zishobora guhagarara, guhindura quotas, cyangwa kwanga CORS.</div>`;
-}
-function apiCard(a){
- const chip=a.kind==="free"?"No key":a.kind==="media"?"Generated media":"Key / setup";
- const cls=a.kind==="free"?"":a.kind==="media"?"media":"key";
- const fields=(a.fields||[]).map(f=>`<input class="api-key" type="text" autocomplete="off" placeholder="${f.replaceAll("_"," ")}" id="key-${a.id}-${f}">`).join("");
- return `<article class="api-card" data-api="${a.id}" data-group="${a.group.toLowerCase()}"><div class="api-card-top"><h3>${a.name}</h3><span class="api-chip ${cls}">${chip}</span></div><p>${a.desc}</p>${fields}<div class="api-actions"><button class="btn small" onclick="runApi('${a.id}')">${a.kind==="media"?"Generate preview":a.kind==="key"?"Test / configure":"Test API"}</button><span class="api-state" id="state-${a.id}">Not tested</span></div><div class="api-result" id="result-${a.id}">Ready to test.</div></article>`;
-}
-function filterApis(){
- const q=($("#apiSearch")?.value||"").toLowerCase(),g=($("#apiGroup")?.value||"").toLowerCase();
- document.querySelectorAll(".api-card").forEach(c=>{c.style.display=(c.innerText.toLowerCase().includes(q))&&(!g||c.dataset.group===g)?"":"none"});
-}
-let apiTestCount=0;
-function setApiResult(id,state,message){
- const s=$("state-"+id),r=$("result-"+id);if(s)s.textContent=state;if(r)r.textContent=message;
-}
-async function runApi(id){
- const a=apiIntegrations.find(x=>x.id===id);if(!a)return;
- setApiResult(id,"Running…","Request is being sent.");
- try{
-  if(a.mode==="image"){
-   const r=await fetch(a.url,{method:"GET"});
-   if(!r.ok)throw new Error("HTTP "+r.status);
-   const card=document.querySelector(`[data-api="${id}"] .api-result`);
-   card.innerHTML=`<div>Image endpoint responded successfully.</div><img alt="${a.name} preview" src="${a.url}" style="display:block;max-width:180px;max-height:180px;margin-top:8px;border-radius:8px">`;
-   setApiResult(id,"Success","Generated media preview loaded.");apiTestCount++;$("#apiPassed").textContent=apiTestCount;return;
-  }
-  let url=a.url,options={method:"GET",headers:{Accept:"application/json"}};
-  if(a.mode==="keyurl"){
-   const key=$( "key-"+id+"-"+a.fields[0]).value.trim();if(!key)throw new Error("Shyiramo API key/token yawe mbere yo kugerageza.");
-   url+=encodeURIComponent(key);
-  }
-  if(a.mode==="headerkey"){
-   const key=$( "key-"+id+"-"+a.fields[0]).value.trim();if(!key)throw new Error("Shyiramo API key yawe mbere yo kugerageza.");
-   options.headers.Authorization=key;
-  }
-  if(a.mode==="config"){
-   const vals=a.fields.map(f=>$( "key-"+id+"-"+f).value.trim());
-   if(vals.some(v=>!v))throw new Error("Iyi service isaba configuration: "+a.fields.join(", "));
-   if(id==="formspree"){
-    const endpoint=vals[0];if(!/^https:\/\/formspree\.io\/f\/[A-Za-z0-9]+$/.test(endpoint))throw new Error("Formspree endpoint igomba kuba imeze nka https://formspree.io/f/xxxxxxx.");
-    const res=await fetch(endpoint,{method:"POST",headers:{"Accept":"application/json","Content-Type":"application/json"},body:JSON.stringify({message:"UBUBIKO SMART connection test",source:"API Integration Center"})});
-    if(!res.ok)throw new Error("Formspree HTTP "+res.status+" — reba endpoint/form settings.");
-    setApiResult(id,"Success","Test message submitted to Formspree. Reba inbox yawe.");apiTestCount++;$("#apiPassed").textContent=apiTestCount;return;
-   }
-   if(id==="emailjs")throw new Error("EmailJS requires service_id, template_id, public_key plus template parameters. Connect it in the EmailJS dashboard; this demo intentionally does not send an email without a configured template.");
-   if(id==="sentry")throw new Error("Sentry needs its official browser SDK initialized with your DSN. A DSN alone is not a REST test endpoint; add the official SDK snippet with your project settings.");
-   if(id==="googleplaces")throw new Error("Google Places requires the Maps JavaScript SDK and an authorized browser key. REST endpoint calls from plain fetch may be blocked by CORS.");
-  }
-  const res=await fetch(url,options);if(!res.ok)throw new Error("HTTP "+res.status+" "+res.statusText);
-  const data=await res.json();
-  const preview=JSON.stringify(data).slice(0,900);
-  setApiResult(id,"Success",`HTTP ${res.status} · JSON received\n${preview}`);
-  apiTestCount++;$("#apiPassed").textContent=apiTestCount;
- }catch(err){setApiResult(id,"Needs attention",err.message+" (CORS, rate limits, provider downtime or credentials may apply.)");}
-}
 
-function render(){let p=$("#page");if(current==="dashboard")p.innerHTML=dashboard();else if(configs[current])p.innerHTML=listPage(current);else if(current==="reports")p.innerHTML=reports();else if(current==="apis")p.innerHTML=apiPage();else p.innerHTML=settings()}
-function openAdd(p){let c=configs[p];modalConfig=p;$("#modalTitle").textContent=c.title+" — Add new";$("#modalFields").innerHTML=c.fields.map(f=>`<div class="field"><label>${f[1]}</label>${f[2]==="select"?`<select name="${f[0]}">${f[3].map(x=>`<option>${x}</option>`).join("")}</select>`:`<input name="${f[0]}" type="${f[2]}" ${f[2]==="number"?'min="0"':''} required>`}</div>`).join("");$("#modalback").classList.add("show")}
+function adminPage(){return pageHead("Admin control center","Manage demo users, roles and access permissions.")+`<div class="panel"><div class="panelhead"><h3>Current session</h3><small>${activeUser.name} · ${activeUser.role}</small></div><div class="field"><label>Switch demo user (simulation only)</label><select id="demoRole">${roles.map(r=>`<option ${r===activeUser.role?"selected":""}>${r}</option>`).join("")}</select></div><div class="field"><label>Display name</label><input id="demoName" value="${activeUser.name.replaceAll('"','&quot;')}"></div><button class="btn gold" onclick="setUser($('#demoName').value||'Staff',$('#demoRole').value)">Apply role</button></div><div class="panel" style="margin-top:16px"><h3>Role permissions</h3>${roles.map(r=>`<div class="alert"><div><b>${r}</b><small>${r==='Admin'?'Full demo access':(permissions[r]||[]).join(', ')}</small></div><span class="tag ${r==='Admin'?'done':'pending'}">${r==='Admin'?'Full access':'Restricted'}</span></div>`).join('')}<p style="color:var(--muted);font-size:12px">This is client-side demo access control. It can be bypassed by editing browser storage or JavaScript; it is not suitable for protecting real business data.</p></div>`}
+function auditPage(){return pageHead("Audit log","Recent actions and blocked permission attempts.")+table(["Time","User","Role","Action","Details"],auditLog.map(x=>`<tr><td>${x.time}</td><td>${x.user}</td><td>${x.role}</td><td>${x.action}</td><td>${x.detail}</td></tr>`).join(''))}
+function assistantPage(){return pageHead("UBUBIKO SMART Assistant","Ask questions about stock, products, requests, returns and reports.")+`<div class="panel"><div id="chatHistory" style="min-height:180px;max-height:360px;overflow:auto;padding:8px"><p><b>UBUBIKO Assistant:</b> Muraho! Nshobora kugufasha gusuzuma stock, ibicuruzwa biri hafi gushira, agaciro ka stock n'ibikorwa.</p></div><div class="toolbar"><input class="search" id="chatInput" style="width:100%;flex:1" placeholder="Ask about stock, low inventory, value, requests..." onkeydown="if(event.key==='Enter')askAssistant()"><button class="btn gold" onclick="askAssistant()">Send</button></div></div>`}
+function askAssistant(){const el=$('#chatInput'),q=(el.value||'').trim();if(!q)return;const h=$('#chatHistory');const low=q.toLowerCase();let answer='I can only answer UBUBIKO SMART questions about inventory, products, stock movements, requests, returns and reports.';const total=db.products.reduce((a,p)=>a+p.qty*p.price,0),lowItems=db.products.filter(p=>p.qty<=p.min);if(/low|hasi|make|shira| 부족/.test(low))answer=lowItems.length?`There are ${lowItems.length} low-stock products: ${lowItems.map(p=>`${p.name} (${p.qty} left; minimum ${p.min})`).join(', ')}.`:'No products are currently below their minimum stock level.';else if(/value|agaciro|worth|inventory total/.test(low))answer=`Current inventory purchase value is ${money(total)} across ${db.products.length} products.`;else if(/product|ibicuruzwa|how many/.test(low))answer=`There are ${db.products.length} registered products: ${db.products.map(p=>`${p.name} (${p.qty} ${p.unit})`).join(', ')}.`;else if(/request|ubusabe/.test(low))answer=`Stock requests: ${db.requests.length} total; ${db.requests.filter(r=>r.status==='Pending').length} pending and ${db.requests.filter(r=>r.status==='Approved').length} approved.`;else if(/movement|stock in|stock out|ibyinjira|ibyavuyemo/.test(low))answer=`Recorded stock movements: ${db.movements.length} (${db.movements.filter(m=>m.type==='IN').length} IN and ${db.movements.filter(m=>m.type==='OUT').length} OUT).`;else if(/return|garura|byagaruwe/.test(low))answer=`There are ${db.returns.length} recorded returns.`;h.innerHTML+=`<p><b>You:</b> ${escapeHTML(q)}</p><p><b>UBUBIKO Assistant:</b> ${escapeHTML(answer)}</p>`;el.value='';h.scrollTop=h.scrollHeight}
+function escapeHTML(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+
+const translations={
+ en:{"Incamake y'ububiko":"Inventory overview","Ibicuruzwa":"Products","Stock movements":"Stock movements","Stock requests":"Stock requests","Returns":"Returns","Suppliers":"Suppliers","Customers":"Customers","Reports":"Reports","Settings":"Settings","Admin & Users":"Admin & Users","Audit log":"Audit log","Stock AI Assistant":"Stock AI Assistant","Ongeramo igicuruzwa":"Add product","Agaciro ka stock":"Stock value","Stock iri hasi":"Low stock","Ibikorwa biheruka":"Recent activity","Ibyagurishijwe (demo)":"Sales (demo)","Nta makuru ahari.":"No records found.","Ongeramo":"Add","Muraho! Dore uko ububiko buhagaze uyu munsi.":"Welcome! Here is today's inventory overview.","Incamake y'ububiko":"Inventory overview","Ibikorwa biheruka":"Recent activity","Ibyinjira":"Stock IN","Ibyasohotse":"Stock OUT","Shakisha":"Search","Itariki":"Date","Izina ry'igicuruzwa":"Product name","Agaciro ka stock":"Stock value","Bibarwa ku giciro cyo kugura":"Calculated at purchase price","Bisaba kongerwamo stock":"Needs replenishment","Reba byose":"View all","Muraho!":"Welcome!","Ongeramo igicuruzwa":"Add product"},
+ fr:{"Incamake y'ububiko":"Vue d'ensemble du stock","Ibicuruzwa":"Produits","Stock movements":"Mouvements de stock","Stock requests":"Demandes de stock","Returns":"Retours","Suppliers":"Fournisseurs","Customers":"Clients","Reports":"Rapports","Settings":"Paramètres","Admin & Users":"Administration et utilisateurs","Audit log":"Journal d'audit","Stock AI Assistant":"Assistant de stock","Ongeramo igicuruzwa":"Ajouter un produit","Agaciro ka stock":"Valeur du stock","Stock iri hasi":"Stock faible","Ibikorwa biheruka":"Activités récentes","Ibyagurishijwe (demo)":"Ventes (démo)","Nta makuru ahari.":"Aucun enregistrement.","Muraho! Dore uko ububiko buhagaze uyu munsi.":"Bienvenue ! Voici l'état du stock aujourd'hui.","Incamake y'ububiko":"Vue d'ensemble du stock","Ibikorwa biheruka":"Activités récentes","Ibyinjira":"Entrées de stock","Ibyasohotse":"Sorties de stock","Shakisha":"Rechercher","Itariki":"Date","Izina ry'igicuruzwa":"Nom du produit","Agaciro ka stock":"Valeur du stock","Bibarwa ku giciro cyo kugura":"Calculé au prix d'achat","Bisaba kongerwamo stock":"Réapprovisionnement nécessaire","Reba byose":"Tout voir","Muraho!":"Bienvenue !","Ongeramo igicuruzwa":"Ajouter un produit"}
+};
+function applyLanguage(){const dict=translations[lang];if(!dict)return;document.querySelectorAll('#nav .txt').forEach(el=>{const key=el.textContent.trim();if(dict[key])el.textContent=dict[key]});document.querySelectorAll('#crumb,.welcome h1,.welcome p,.stathead span,.panelhead h3,.empty').forEach(el=>{const key=el.textContent.trim();if(dict[key])el.textContent=dict[key]});}
+
+function render(){let p=$("#page");if(current==="dashboard")p.innerHTML=dashboard();else if(configs[current])p.innerHTML=listPage(current);else if(current==="reports")p.innerHTML=reports();else if(current==="admin")p.innerHTML=adminPage();else if(current==="audit")p.innerHTML=auditPage();else if(current==="assistant")p.innerHTML=assistantPage();else p.innerHTML=settings();applyLanguage()}
+function openAdd(p){if(!guard(p))return;let c=configs[p];modalConfig=p;$("#modalTitle").textContent=c.title+" — Add new";$("#modalFields").innerHTML=c.fields.map(f=>`<div class="field"><label>${f[1]}</label>${f[2]==="select"?`<select name="${f[0]}">${f[3].map(x=>`<option>${x}</option>`).join("")}</select>`:`<input name="${f[0]}" type="${f[2]}" ${f[2]==="number"?'min="0"':''} required>`}</div>`).join("");$("#modalback").classList.add("show")}
 $("#cancelModal").onclick=()=>$("#modalback").classList.remove("show");
 $("#saveModal").onclick=()=>{let c=configs[modalConfig],obj={id:Date.now()};for(let f of c.fields){let el=$(`#modalFields [name="${f[0]}"]`);if(!el.value.trim()){el.focus();return}obj[f[0]]=f[2]==="number"?Number(el.value):el.value}
-if(modalConfig==="stock"){let product=db.products.find(p=>p.name.toLowerCase()===obj.product.toLowerCase());if(product){product.qty+=obj.type==="IN"?obj.qty:-obj.qty;if(product.qty<0){product.qty+=obj.type==="IN"?-obj.qty:obj.qty;toast("Not enough stock for this OUT movement.");return}}}
-if(modalConfig==="returns"){let product=db.products.find(p=>p.name.toLowerCase()===obj.product.toLowerCase());if(product)product.qty+=obj.qty}
-db[modalConfig].unshift(obj);persist();$("#modalback").classList.remove("show");render();toast("Saved successfully in this demo.")};
-function removeRow(p,id){if(!confirm("Delete this demo record?"))return;db[p]=db[p].filter(x=>x.id!==id);persist();render();toast("Record deleted from demo.")}
-function approve(id){let r=db.requests.find(x=>x.id===id);if(r){r.status="Approved";persist();render();toast("Request approved.")}}
+if(modalConfig==="stock"){if(!guard("stock"))return;let product=db.products.find(p=>p.name.toLowerCase()===obj.product.toLowerCase());if(product){product.qty+=obj.type==="IN"?obj.qty:-obj.qty;if(product.qty<0){product.qty+=obj.type==="IN"?-obj.qty:obj.qty;toast("Not enough stock for this OUT movement.");return}}}
+if(modalConfig==="returns"){if(!guard("returns"))return;let product=db.products.find(p=>p.name.toLowerCase()===obj.product.toLowerCase());if(product)product.qty+=obj.qty}
+db[modalConfig].unshift(obj);audit("CREATE",modalConfig+": "+(obj.name||obj.product||"record"));persist();$("#modalback").classList.remove("show");render();toast("Saved successfully in this demo.")};
+function removeRow(p,id){if(!guard(p))return;if(!confirm("Delete this demo record?"))return;db[p]=db[p].filter(x=>x.id!==id);audit("DELETE",p+" #"+id);persist();render();toast("Record deleted from demo.")}
+function approve(id){if(!guard("requests"))return;let r=db.requests.find(x=>x.id===id);if(r){r.status="Approved";audit("APPROVE","Request #"+id);persist();render();toast("Request approved.")}}
 function filterRows(){let q=$("#filter").value.toLowerCase();document.querySelectorAll("#tableArea tbody tr").forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?"":"none")}
 function exportData(){let blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ububiko-smart-demo-data.json";a.click();URL.revokeObjectURL(a.href)}
-function resetDemo(){if(confirm("Restore original demo data? Your local demo changes will be lost.")){db=JSON.parse(JSON.stringify(initial));persist();render();toast("Demo data restored.")}}
+function resetDemo(){if(!guard("admin"))return;if(confirm("Restore original demo data? Your local demo changes will be lost.")){db=JSON.parse(JSON.stringify(initial));audit("RESET","Demo data restored");persist();render();toast("Demo data restored.")}}
 $("#themeBtn").onclick=()=>document.body.classList.toggle("dark");
-$("#langBtn").onclick=()=>{lang=lang==="rw"?"en":"rw";$("#langBtn").textContent=lang==="rw"?"EN":"RW";toast(lang==="rw"?"Kinyarwanda mode selected":"English mode selected")};
+$("#langBtn").onclick=()=>{lang=lang==="rw"?"en":lang==="en"?"fr":"rw";$("#langBtn").textContent=lang.toUpperCase();render();toast(lang==="rw"?"Kinyarwanda":"Language: "+lang.toUpperCase())};
+$("#userAvatar").textContent=activeUser.name.charAt(0).toUpperCase();
+audit("SESSION START","Application opened");
 render();
 </script>
 </body>
