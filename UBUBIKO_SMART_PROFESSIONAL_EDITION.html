@@ -28,7 +28,7 @@ button,input,select{font:inherit}button{cursor:pointer;border:0}
 .nav .ico{font-size:10px;font-weight:700;letter-spacing:-.25px}</style>
 </head>
 <body>
-<section id="loginScreen" aria-labelledby="loginHeading"><div class="login-card"><div class="login-brand"><div class="brandmark">U</div><div><b style="color:#10243a;letter-spacing:.6px">UBUBIKO SMART</b><div style="font-size:10px;color:#718096;letter-spacing:1.2px">INVENTORY MANAGEMENT</div></div></div><h1 id="loginHeading">Welcome back</h1><p>Sign in to continue to your inventory dashboard.</p><form id="loginForm"><div class="field"><label for="loginUsername">Username</label><input id="loginUsername" autocomplete="username" placeholder="Enter username" required></div><div class="field"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Enter password" required></div><button class="btn gold login-submit" type="submit">Sign in →</button><div id="loginError" class="login-error" role="alert" aria-live="polite">Incorrect username or password.</div></form><div class="login-hint"><b>Demo accounts</b><br>admin / admin123<br>manager / manager123<br>cashier / cashier123<br>storekeeper / store123</div><div style="text-align:center;color:#9aa6b2;font-size:10px;margin-top:18px">Demo login only · Do not use real passwords</div></div></section>
+<section id="loginScreen" aria-labelledby="loginHeading"><div class="login-card"><div class="login-brand"><div class="brandmark">U</div><div><b style="color:#10243a;letter-spacing:.6px">UBUBIKO SMART</b><div style="font-size:10px;color:#718096;letter-spacing:1.2px">INVENTORY MANAGEMENT</div></div></div><h1 id="loginHeading">Welcome back</h1><p>Sign in to continue to your inventory dashboard.</p><form id="loginForm"><div class="field"><label for="loginUsername">Username</label><input id="loginUsername" autocomplete="username" placeholder="Enter username" required></div><div class="field"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Enter password" required></div><button class="btn gold login-submit" type="submit">Sign in →</button><div id="loginError" class="login-error" role="alert" aria-live="polite">Incorrect username or password.</div></form><div class="login-hint"><b>Demo accounts</b><br>admin / admin123<br>manager / manager123<br>cashier / cashier123<br>storekeeper / store123</div><div class="field" style="margin-top:16px"><label for="loginLanguageSelect">Language / Ururimi / Langue</label><select id="loginLanguageSelect" onchange="changeLanguage(this.value)"><option value="rw">Ikinyarwanda</option><option value="en">English</option><option value="fr">Français</option></select></div><div style="text-align:center;color:#9aa6b2;font-size:10px;margin-top:18px">Demo login only · Do not use real passwords</div></div></section>
 <div class="app" id="appShell">
 <aside class="sidebar">
  <div class="brand"><div class="brandmark">U</div><div><b>UBUBIKO SMART</b><small>INVENTORY MANAGEMENT</small></div></div>
@@ -95,7 +95,7 @@ function allowed(action){const role=activeUser?.role,access=permissions[role]||[
 function guard(action){if(!allowed(action)){toast("Access denied: insufficient role permissions.");audit("BLOCKED",action);return false}return true}
 function audit(action,detail){auditLog.unshift({id:Date.now(),time:new Date().toLocaleString(),user:activeUser.name,role:activeUser.role,action,detail});auditLog=auditLog.slice(0,200);localStorage.setItem("ububikoAudit",JSON.stringify(auditLog))}
 function setUser(name,role){if(!guard("admin"))return;if(!roles.includes(role)){toast("Choose a valid demo role.");return}const displayName=String(name||"Staff").trim().slice(0,80)||"Staff";activeUser={name:displayName,role};sessionStorage.setItem("ububikoActiveUser",JSON.stringify(activeUser));$("#userAvatar").textContent=displayName.charAt(0).toUpperCase();audit("SWITCH DEMO ROLE",role);render();toast("Active demo user: "+role)}
-function showAuthenticatedApp(){if(!activeUser){$("#loginScreen").style.display="grid";$("#appShell").style.display="none";return}$("#loginScreen").style.display="none";$("#appShell").style.display="flex";$("#userAvatar").textContent=activeUser.name.charAt(0).toUpperCase();render()}
+function showAuthenticatedApp(){if(!activeUser){$("#loginScreen").style.display="grid";$("#appShell").style.display="none";applyLanguage();return}$("#loginScreen").style.display="none";$("#appShell").style.display="flex";$("#userAvatar").textContent=activeUser.name.charAt(0).toUpperCase();render()}
 function logout(){if(activeUser)audit("LOGOUT","User signed out");sessionStorage.removeItem("ububikoActiveUser");activeUser=null;showAuthenticatedApp();$("#loginPassword").value="";$("#loginUsername").value="";toast("You have been logged out.")}
 const $=s=>document.querySelector(s), money=n=>{const value=Number(n);return (Number.isFinite(value)?value:0).toLocaleString("en-US")+" RWF"};
 function persist(){localStorage.setItem("ububikoDemoData",JSON.stringify(db))}
@@ -247,13 +247,22 @@ function translateText(value){
 }
 function applyLanguage(){
  document.documentElement.lang=lang;
- $("#langBtn").textContent=lang.toUpperCase();
- const walker=document.createTreeWalker(document.querySelector("#appShell"),NodeFilter.SHOW_TEXT);
+ const langButton=$("#langBtn");if(langButton)langButton.textContent=lang.toUpperCase();
+ const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
  const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
- nodes.forEach(node=>{if(node.nodeValue.trim())node.nodeValue=translateText(node.nodeValue)});
- document.querySelectorAll("#appShell [placeholder],#appShell [aria-label],#appShell [title],#appShell input[type=button],#appShell input[type=submit]").forEach(el=>{
-  ["placeholder","aria-label","title","value"].forEach(attr=>{if(el.hasAttribute(attr))el.setAttribute(attr,translateText(el.getAttribute(attr)))});
+ nodes.forEach(node=>{
+  if(!node.dataset.i18nOriginal)node.dataset.i18nOriginal=node.nodeValue;
+  if(node.dataset.i18nOriginal.trim())node.nodeValue=translateText(node.dataset.i18nOriginal);
  });
+ document.querySelectorAll("input,button,select,textarea,[aria-label],[title]").forEach(el=>{
+  ["placeholder","aria-label","title","value"].forEach(attr=>{
+   if(!el.hasAttribute(attr))return;
+   const key="i18nOriginal"+attr.replace(/(^|-)([a-z])/g,(_,a,b)=>b.toUpperCase());
+   if(!el.dataset[key])el.dataset[key]=el.getAttribute(attr);
+   el.setAttribute(attr,translateText(el.dataset[key]));
+  });
+ });
+ ["#languageSelect","#loginLanguageSelect"].forEach(sel=>{const el=$(sel);if(el)el.value=lang});
 }
 function changeLanguage(next){
  if(!["rw","en","fr"].includes(next))return;
