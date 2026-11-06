@@ -218,7 +218,7 @@ function saveModal(){let kind=modalKind;if(kind==="product"&&!allowed("products"
 else if(kind.startsWith("edit:")){let p=products.find(x=>x.id===+kind.split(":")[1]);p.qty=+document.getElementById("fQty").value;p.price=+document.getElementById("fPrice").value;recordAudit("Product updated",p.name)}
 else if(kind==="in"||kind==="out"){let p=products.find(x=>x.id===+document.getElementById("fProduct").value),q=+document.getElementById("fQty").value;if(!q||q<1)return;if(kind==="out"&&p.qty<q)return notify(t("denied"));p.qty+=kind==="in"?q:-q;let id="MV-"+(1043+movements.length);movements.unshift({id,product:p.name,type:kind==="in"?"stockIn":"stockOut",qty:q,unitPrice:p.price,total:kind==="out"?q*p.price:0,date:new Date().toISOString().slice(0,10),by:role});recordAudit(kind==="in"?"Stock received":"Stock issued",p.name+" "+q)}
 else if(kind==="request"){let p=products.find(x=>x.id===+document.getElementById("fProduct").value),q=+document.getElementById("fQty").value;requests.unshift({id:"RQ-"+String(201+requests.length).padStart(4,"0"),product:p.name,qty:q,status:"pending",by:role});recordAudit("Request created",p.name)}
-else if(kind==="supplier"||kind.startsWith("editSupplier:")){const id=kind.startsWith("editSupplier:")?kind.slice("editSupplier:".length):"",name=document.getElementById("fSupplierName").value.trim(),contact=document.getElementById("fSupplierContact").value.trim(),phone=document.getElementById("fSupplierPhone").value.trim(),email=document.getElementById("fSupplierEmail").value.trim(),items=document.getElementById("fSupplierItems").value.trim(),status=document.getElementById("fSupplierStatus").value,notes=document.getElementById("fSupplierNotes").value.trim();if(!name||!phone)return notify(lang==="rw"?"Izina ry'ikigo na telefoni birakenewe.":"Company name and phone are required.");if(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return notify("Enter a valid email address.");if(suppliers.some(x=>x.id!==id&&(x.phone.replace(/\\s/g,"")===phone.replace(/\\s/g,"")||(email&&x.email.toLowerCase()===email.toLowerCase()))))return notify(supplierText("duplicate"));const record={id:id||"SUP-"+String(Math.max(0,...suppliers.map(x=>Number(String(x.id).replace(/\\D/g,""))||0))+1).padStart(3,"0"),name,contact,phone,email,items,status,notes};if(id){const index=suppliers.findIndex(x=>x.id===id);if(index<0)return notify(t("denied"));suppliers[index]=record;recordAudit("Supplier updated",name)}else{suppliers.unshift(record);recordAudit("Supplier created",name)}persistCollection("ububiko-suppliers-v1",suppliers)}
+else if(kind==="supplier"||kind.startsWith("editSupplier:")){const id=kind.startsWith("editSupplier:")?kind.slice("editSupplier:".length):"",name=document.getElementById("fSupplierName").value.trim(),contact=document.getElementById("fSupplierContact").value.trim(),phone=document.getElementById("fSupplierPhone").value.trim(),email=document.getElementById("fSupplierEmail").value.trim(),items=document.getElementById("fSupplierItems").value.trim(),status=document.getElementById("fSupplierStatus").value,notes=document.getElementById("fSupplierNotes").value.trim();if(!name||!phone)return notify(lang==="rw"?"Izina ry'ikigo na telefoni birakenewe.":"Company name and phone are required.");if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return notify("Enter a valid email address.");if(suppliers.some(x=>x.id!==id&&(x.phone.replace(/\s/g,"")===phone.replace(/\s/g,"")||(email&&x.email.toLowerCase()===email.toLowerCase()))))return notify(supplierText("duplicate"));const record={id:id||"SUP-"+String(Math.max(0,...suppliers.map(x=>Number(String(x.id).replace(/\\D/g,""))||0))+1).padStart(3,"0"),name,contact,phone,email,items,status,notes};if(id){const index=suppliers.findIndex(x=>x.id===id);if(index<0)return notify(t("denied"));suppliers[index]=record;recordAudit("Supplier updated",name)}else{suppliers.unshift(record);recordAudit("Supplier created",name)}persistCollection("ububiko-suppliers-v1",suppliers)}
 else if(kind==="customer"){const name=document.getElementById("fCustomerName").value.trim(),phone=document.getElementById("fCustomerPhone").value.trim();if(!name||!phone)return notify("Name and phone are required.");customers.push({id:"CUS-"+String(customers.length+1).padStart(3,"0"),name,phone,email:document.getElementById("fCustomerEmail").value.trim(),notes:document.getElementById("fCustomerNotes").value.trim()});persistCollection("ububiko-customers-v1",customers);recordAudit("Customer created",name)}
 else if(kind==="return"){const customer=document.getElementById("fReturnCustomer").value,product=document.getElementById("fReturnProduct").value,qty=+document.getElementById("fReturnQty").value,refund=+document.getElementById("fReturnRefund").value,reason=document.getElementById("fReturnReason").value.trim();if(!qty||qty<1||refund<0||!reason)return notify("Check return details.");returnsData.unshift({id:"RET-"+String(returnsData.length+1).padStart(3,"0"),customer,product,qty,reason,refund,status:"pending",date:new Date().toISOString().slice(0,10),by:role});persistCollection("ububiko-returns-v1",returnsData);recordAudit("Return registered",product+" x"+qty)}
 else if(kind.startsWith("resetPassword:")){if(role!=="Admin")return notify(t("noPermission"));const target=kind.slice("resetPassword:".length),account=userAccounts.find(x=>x.username===target);if(!account||account.username.toLowerCase()===String(currentUsername).toLowerCase())return notify(lang==="rw"?"Ntushobora gukoresha ubu buryo kuri konti winjiyemo.":"You cannot reset your own password here.");const next=document.getElementById("fResetPass").value,confirmNext=document.getElementById("fResetPassConfirm").value;if(next.length<8)return notify(lang==="rw"?"Ijambo rishya rigomba kugira nibura inyuguti 8.":"New password must be at least 8 characters.");if(next!==confirmNext)return notify(lang==="rw"?"Amagambo y'ibanga mashya ntahura.":"New passwords do not match.");account.password=next;account.passwordUpdatedAt=new Date().toISOString();account.passwordUpdatedBy=currentUsername;recordAudit("Admin reset user password",target);persistUserAccounts()}
@@ -228,5 +228,333 @@ function approveRequest(id){if(role!=="Admin"&&role!=="Manager")return notify(t(
 function printReport(){if(!allowed("reports"))return notify(t("noPermission"));window.print()}
 function exportReport(){if(!allowed("reports"))return notify(t("noPermission"));const rows=role==="Cashier"?[["Reference","Product","Quantity","Amount RWF","Date","By"],...movements.filter(m=>m.type==="stockOut").map(m=>[m.id,m.product,m.qty,m.total??m.qty*(m.unitPrice??(products.find(p=>p.name===m.product)?.price||0)),m.date,m.by])]:[["Product","SKU","Quantity","Minimum","Price RWF"],...products.map(p=>[p.name,p.sku,p.qty,p.min,p.price])];const csv=rows.map(row=>row.map(value=>'"'+String(value??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");const blob=new Blob(["\uFEFF",csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=role==="Cashier"?"ububiko-sales-report.csv":"ububiko-stock-report.csv";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);notify(t("exported"))}
 updateLoginLanguage();
+
+/* UBUBIKO SMART — frontend hardening and usability enhancements */
+(function(){
+  const oldSaveModal = saveModal;
+  const originalDashboard = dashboard;
+  const makeRef = (prefix, rows, width=4) => {
+    const max = rows.reduce((n,x)=>Math.max(n, Number(String(x.id||"").replace(/\D/g,""))||0), 0);
+    return prefix + String(max+1).padStart(width,"0");
+  };
+  const inlineArg = v => safeText("\'"+String(v).replace(/\\/g,"\\\\").replace(/\'/g,"\\'")+"\'");
+  const persistAll = () => {
+    persistCollection("ububiko-products-v1",products);
+    persistCollection("ububiko-movements-v1",movements);
+    persistCollection("ububiko-requests-v1",requests);
+    persistCollection("ububiko-returns-v1",returnsData);
+    persistCollection("ububiko-suppliers-v1",suppliers);
+    persistCollection("ububiko-customers-v1",customers);
+    persistCollection("ububiko-audit-v1",audit);
+  };
+  const salesTotal = rows => rows.filter(m=>m.type==="stockOut").reduce((n,m)=>{
+    const p=products.find(x=>x.name===m.product);
+    return n + Number(m.total ?? (m.qty * (m.unitPrice ?? p?.price ?? 0)));
+  },0);
+
+  /* Escape all dynamic text at the point it enters HTML. */
+  movementTable = function(rows){
+    const cash=role==="Cashier";
+    return '<div class="table-wrap"><table><thead><tr><th>'+t("reference")+'</th><th>'+t("product")+'</th><th>'+t("type")+'</th><th>'+t("quantity")+'</th>'+(cash?'<th>Amount (RWF)</th>':'')+'<th>'+t("date")+'</th><th>'+t("role")+'</th></tr></thead><tbody>'+
+      (rows.length?rows.map(m=>'<tr><td><b>'+safeText(m.id)+'</b></td><td>'+safeText(m.product)+'</td><td><span class="status '+(m.type==="stockOut"?"warn":"")+'">'+t(m.type)+'</span></td><td>'+fmt(Number(m.qty)||0)+'</td>'+(cash?'<td>'+fmt(Number(m.total ?? ((Number(m.qty)||0)*Number(m.unitPrice ?? (products.find(p=>p.name===m.product)?.price ?? 0)))))+'</td>':'')+'<td>'+safeText(m.date)+'</td><td>'+safeText(m.by)+'</td></tr>').join(""):'<tr><td colspan="'+(cash?7:6)+'" class="empty">'+t("noRecords")+'</td></tr>')+
+      '</tbody></table></div>';
+  };
+
+  dashboard = function(){
+    if(role==="Cashier") return cashierDashboard();
+    const activeProducts=products.filter(p=>!p.archived);
+    const total=activeProducts.reduce((n,p)=>n+(Number(p.qty)||0),0);
+    const value=activeProducts.reduce((n,p)=>n+(Number(p.qty)||0)*(Number(p.price)||0),0);
+    const low=activeProducts.filter(p=>p.qty<=p.min).length;
+    const sales=salesTotal(movements);
+    const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(6-i));return d.toISOString().slice(0,10)});
+    const daily=days.map(day=>movements.filter(m=>m.type==="stockOut"&&m.date===day).reduce((n,m)=>n+Number(m.qty||0),0));
+    const max=Math.max(1,...daily);
+    const dayLabels=days.map(day=>{const d=new Date(day+"T12:00:00");return d.toLocaleDateString(lang==="fr"?"fr-FR":lang==="rw"?"en":"en-US",{weekday:"short"})});
+    return head(t("welcome"),t("overview"),'<button class="btn" onclick="printReport()">▤ Print / PDF</button><button class="btn btn-gold" onclick="exportReport()">↧ '+t("export")+'</button><button class="btn btn-gold" onclick="openProductModal()">＋ '+t("addProduct")+'</button>')+
+      '<div class="stats"><div class="stat"><div class="stat-top">'+t("totalProducts")+'<span class="stat-icon">▣</span></div><strong>'+activeProducts.length+'</strong><small>'+fmt(total)+' '+t("units")+'</small></div><div class="stat"><div class="stat-top">'+t("stockValue")+'<span class="stat-icon">◈</span></div><strong>'+fmt(value)+' <small>RWF</small></strong><small>'+t("totalValue")+'</small></div><div class="stat"><div class="stat-top">'+t("sales")+'<span class="stat-icon">↗</span></div><strong>'+fmt(sales)+' <small>RWF</small></strong><small>'+movements.filter(m=>m.type==="stockOut").length+' transactions</small></div><div class="stat"><div class="stat-top">'+t("lowStock")+'<span class="stat-icon">⚑</span></div><strong>'+low+'</strong><small>'+t("lowAlerts")+'</small></div></div>'+
+      '<div class="panels"><div><div class="panel"><div class="panel-head"><h3>'+t("stockOverview")+'</h3><small>'+t("last7")+' · Units issued</small></div><div class="panel-body"><div class="bar-chart">'+daily.map((v,i)=>'<div class="bar-col"><div class="bar" title="'+v+' units" style="height:'+Math.max(5,v/max*100)+'%"></div><small>'+safeText(dayLabels[i])+'</small></div>').join("")+'</div></div></div><div class="panel"><div class="panel-head"><h3>'+t("recentActivity")+'</h3><button class="btn" onclick="setPage(\'movements\')">'+t("viewAll")+'</button></div>'+movementTable(movements.slice(0,5))+'</div></div><div><div class="panel"><div class="panel-head"><h3>'+t("lowAlerts")+'</h3><button class="btn" onclick="setPage(\'products\')">'+t("viewAll")+'</button></div><div class="panel-body"><div class="alert-list">'+(activeProducts.filter(p=>p.qty<=p.min).map(p=>'<div class="alert"><div><b>'+safeText(p.icon||"📦")+' '+safeText(p.name)+'</b><small>'+fmt(p.qty)+' / '+fmt(p.min)+' '+t("units")+'</small></div><span class="alert-num">'+(p.qty===0?t("out"):t("low"))+'</span></div>').join("")||'<div class="empty">'+t("noRecords")+'</div>')+'</div></div></div><div class="panel"><div class="panel-head"><h3>'+t("quickActions")+'</h3></div><div class="panel-body"><div class="quick-grid"><button class="quick" onclick="openRequestModal()"><span>⇧</span><b>'+t("newRequest")+'</b><small>'+t("request")+'</small></button><button class="quick" onclick="openMovementModal()"> <span>⇩</span><b>'+t("receiveStock")+'</b><small>'+t("stockIn")+'</small></button><button class="quick" onclick="openMovementModal(true)"><span>↗</span><b>'+t("recordSale")+'</b><small>'+t("stockOut")+'</small></button><button class="quick" onclick="setPage(\'reports\')"><span>▥</span><b>'+t("reports")+'</b><small>'+t("export")+'</small></button></div></div></div></div></div>';
+  };
+
+  productPage = function(){
+    if(!allowed("products"))return denied();
+    const rows=products.filter(p=>(filter==="archived"?!!p.archived:!p.archived)&&
+      (filter==="all"||filter==="archived"||filter==="low"&&p.qty<=p.min||filter==="available"&&p.qty>p.min&&p.qty>0||filter==="out"&&p.qty===0)&&
+      (!query||[p.name,p.sku,p.category].some(v=>String(v||"").toLowerCase().includes(query.toLowerCase()))));
+    const body=rows.map(p=>'<tr><td><div class="product"><div class="product-icon">'+safeText(p.icon||"📦")+'</div><div><b>'+safeText(p.name)+'</b><small>'+safeText(p.id)+'</small></div></div></td><td>'+safeText(p.sku)+'</td><td>'+safeText(p.category)+'</td><td><b>'+fmt(p.qty)+'</b></td><td>'+fmt(p.price)+' RWF</td><td>'+stockStatus(p)+'</td><td>'+(allowed("products","u")?'<button class="btn" onclick="editProduct('+Number(p.id)+')">✎</button> ':'')+(allowed("products","d")?'<button class="btn" onclick="archiveProduct('+Number(p.id)+')">'+(p.archived?"Restore":"Archive")+'</button>':'—')+'</td></tr>').join("");
+    const filters='<option value="all">'+t("all")+'</option><option value="available">'+t("available")+'</option><option value="low">'+t("low")+'</option><option value="out">'+t("out")+'</option>'+(role==="Admin"?'<option value="archived">Archived</option>':'');
+    return head(t("products"),t("moduleInfo"),allowed("products","c")?'<button class="btn btn-gold" onclick="openProductModal()">＋ '+t("addProduct")+'</button>':'')+'<div class="panel"><div class="panel-head"><div class="toolbar"><input class="search" aria-label="Search products" placeholder="'+t("search")+'" value="'+safeText(query)+'" oninput="query=this.value;render()"><select class="select" aria-label="Filter products" onchange="filter=this.value;render()">'+filters.replace('value="'+filter+'"','value="'+filter+'" selected')+'</select></div><small>'+rows.length+' '+t("product")+'</small></div><div class="table-wrap"><table><thead><tr><th>'+t("product")+'</th><th>SKU</th><th>'+t("category")+'</th><th>'+t("quantity")+'</th><th>'+t("price")+'</th><th>'+t("status")+'</th><th>'+t("action")+'</th></tr></thead><tbody>'+(body||'<tr><td colspan="7" class="empty">'+t("noRecords")+'</td></tr>')+'</tbody></table></div></div>';
+  };
+
+  editProduct = function(id){
+    if(!allowed("products","u"))return notify(t("noPermission"));
+    const p=products.find(x=>x.id===id); if(!p)return notify(t("denied"));
+    openModal(t("update"),safeText(p.name),'<div class="field"><label>'+t("name")+'</label><input id="fName" maxlength="100" value="'+safeText(p.name)+'" required></div><div class="field"><label>SKU</label><input id="fSku" maxlength="40" value="'+safeText(p.sku)+'" required></div><div class="field"><label>'+t("category")+'</label><input id="fCategory" maxlength="80" value="'+safeText(p.category)+'"></div><div class="field"><label>'+t("quantity")+'</label><input id="fQty" type="number" min="0" step="1" value="'+Number(p.qty)+'" required></div><div class="field"><label>'+t("price")+' (RWF)</label><input id="fPrice" type="number" min="0" step="1" value="'+Number(p.price)+'" required></div><div class="field"><label>'+t("minimum")+'</label><input id="fMin" type="number" min="0" step="1" value="'+Number(p.min)+'" required></div>',"edit:"+id);
+  };
+
+  archiveProduct = function(id){
+    if(!allowed("products","d"))return notify(t("noPermission"));
+    const p=products.find(x=>x.id===id);if(!p)return notify(t("denied"));
+    if(p.archived){p.archived=false;recordAudit("Product restored",p.name);}
+    else {if(p.qty>0)return notify(lang==="rw"?"Banza usohore stock isigaye mbere yo guhisha igicuruzwa.":"Move remaining stock before archiving this product.");if(!confirm("Archive "+p.name+"? Historical transactions will be kept."))return;p.archived=true;recordAudit("Product archived",p.name);}
+    persistCollection("ububiko-products-v1",products);render();notify(t("saved"));
+  };
+
+  requestPage = function(){
+    if(!allowed("requests"))return denied();
+    const rows=requests.map(r=>'<tr><td><b>'+safeText(r.id)+'</b></td><td>'+safeText(r.product)+'</td><td>'+fmt(r.qty)+'</td><td>'+requestStatus(r.status)+'</td><td>'+safeText(r.by)+'</td><td>'+(r.status==="pending"&&["Admin","Manager"].includes(role)?'<button class="btn" onclick="approveRequest('+inlineArg(r.id)+')">Approve</button> <button class="btn" onclick="rejectRequest('+inlineArg(r.id)+')">Reject</button>':r.status==="approved"&&["Admin","Manager"].includes(role)?'<button class="btn btn-gold" onclick="processRequest('+inlineArg(r.id)+')">Receive stock</button>':'—')+'</td></tr>').join("");
+    return head(t("requests"),t("moduleInfo"),allowed("requests","c")?'<button class="btn btn-gold" onclick="openRequestModal()">＋ '+t("newRequest")+'</button>':'')+'<div class="panel"><div class="table-wrap"><table><thead><tr><th>'+t("reference")+'</th><th>'+t("product")+'</th><th>'+t("quantity")+'</th><th>'+t("status")+'</th><th>'+t("role")+'</th><th>'+t("action")+'</th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" class="empty">'+t("noRecords")+'</td></tr>')+'</tbody></table></div></div>';
+  };
+  rejectRequest = function(id){if(!["Admin","Manager"].includes(role))return notify(t("noPermission"));const r=requests.find(x=>x.id===id);if(!r||r.status!=="pending")return notify(t("denied"));r.status="rejected";persistCollection("ububiko-requests-v1",requests);recordAudit("Request rejected",id);render();notify(t("saved"));};
+  processRequest = function(id){
+    if(!["Admin","Manager"].includes(role))return notify(t("noPermission"));
+    const r=requests.find(x=>x.id===id),p=products.find(x=>x.name===r?.product);
+    if(!r||r.status!=="approved"||!p)return notify(t("denied"));
+    p.qty+=Number(r.qty);r.status="processed";
+    const ref=makeRef("MV-",movements,4);
+    movements.unshift({id:ref,product:p.name,type:"stockIn",qty:Number(r.qty),date:new Date().toISOString().slice(0,10),by:role,source:r.id});
+    persistAll();recordAudit("Approved request received",r.id+" / "+p.name+" +"+r.qty);render();notify(t("saved"));
+  };
+  approveRequest = function(id){if(!["Admin","Manager"].includes(role))return notify(t("noPermission"));const r=requests.find(x=>x.id===id);if(!r||r.status!=="pending")return notify(t("denied"));r.status="approved";persistCollection("ububiko-requests-v1",requests);recordAudit("Request approved",id);render();notify(t("saved"));};
+
+  cashierDashboard = function(){
+    const sales=movements.filter(m=>m.type==="stockOut"),total=salesTotal(movements),refunds=returnsData.filter(r=>r.status==="approved").reduce((n,r)=>n+Number(r.refund||0),0);
+    return head(lang==="rw"?"Incamake y'ubucuruzi":"Sales overview",lang==="rw"?"Cashier abona iby'ubucuruzi n'abakiriya gusa.":"Cashier access is limited to sales and customers.",'<button class="btn btn-gold" onclick="setPage(\'customers\')">＋ '+t("customers")+'</button><button class="btn btn-gold" onclick="openMovementModal(true)">＋ '+t("recordSale")+'</button>')+'<div class="stats"><div class="stat"><div class="stat-top">'+t("sales")+'</div><strong>'+fmt(total)+' RWF</strong><small>'+sales.length+' sales</small></div><div class="stat"><div class="stat-top">'+t("customers")+'</div><strong>'+customers.length+'</strong></div><div class="stat"><div class="stat-top">Approved refunds</div><strong>'+fmt(refunds)+' RWF</strong></div></div><div class="panel"><div class="panel-head"><h3>Sales history</h3></div>'+movementTable(sales)+'</div>';
+  };
+
+  returnsPage = function(){
+    if(!allowed("returns"))return denied();
+    const rows=returnsData.map(r=>'<tr><td><b>'+safeText(r.id)+'</b></td><td>'+safeText(r.customer)+'</td><td>'+safeText(r.product)+'</td><td>'+fmt(r.qty)+'</td><td>'+fmt(r.refund)+'</td><td>'+requestStatus(r.status)+'</td><td>'+(r.status==="pending"&&["Admin","Manager"].includes(role)?'<button class="btn" onclick="approveReturn('+inlineArg(r.id)+')">Approve refund</button>':r.status==="approved"&&["Admin","Manager","Storekeeper"].includes(role)?'<button class="btn" onclick="receiveReturn('+inlineArg(r.id)+')">Restock</button>':'—')+'</td></tr>').join("");
+    return head(t("returns"),lang==="rw"?"Andika ibicuruzwa byagaruwe, genzura amafaranga, kandi ukurikirane uko byakiriwe.":"Register returns, review refunds and track restocking.",["Admin","Manager","Cashier"].includes(role)?'<button class="btn btn-gold" onclick="openReturnModal()">＋ '+(lang==="rw"?"Andika igarura":"Register return")+'</button>':'')+'<div class="panel"><div class="panel-head"><h3>'+t("returns")+'</h3><span class="permission">'+returnsData.length+' records</span></div><div class="table-wrap"><table><thead><tr><th>Reference</th><th>Customer</th><th>Product</th><th>Qty</th><th>Refund (RWF)</th><th>Status</th><th>Action</th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" class="empty">'+t("noRecords")+'</td></tr>')+'</tbody></table></div></div>';
+  };
+  receiveReturn = function(id){
+    if(!["Admin","Manager","Storekeeper"].includes(role))return notify(t("noPermission"));
+    const r=returnsData.find(x=>x.id===id),p=products.find(x=>x.name===r?.product);
+    if(!r||r.status!=="approved"||!p)return notify(t("denied"));
+    p.qty+=Number(r.qty);r.status="restocked";const ref=makeRef("MV-",movements,4);
+    movements.unshift({id:ref,product:p.name,type:"stockIn",qty:Number(r.qty),date:new Date().toISOString().slice(0,10),by:role,source:r.id});
+    persistAll();recordAudit("Returned goods restocked",id);render();notify(t("saved"));
+  };
+
+  /* Consistent, collision-free customer IDs and safe customer rendering. */
+  customersPage = function(){
+    if(!allowed("customers"))return denied();
+    const canEdit=allowed("customers","u"),canDelete=allowed("customers","d");
+    const rows=customers.filter(c=>!query||[c.name,c.phone,c.email,c.id].some(v=>String(v||"").toLowerCase().includes(query.toLowerCase())));
+    return head(t("customers"),lang==="rw"?"Andika kandi urebe amakuru y'abakiriya.":"Manage customer contact records.",allowed("customers","c")?'<button class="btn btn-gold" onclick="openCustomerModal()">＋ '+t("add")+'</button>':'')+'<div class="panel"><div class="panel-head"><div class="toolbar"><input class="search" placeholder="'+t("search")+'" value="'+safeText(query)+'" oninput="query=this.value;render()"></div><span class="permission">'+rows.length+' records</span></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Email</th><th>Notes</th><th>Action</th></tr></thead><tbody>'+(rows.map(c=>'<tr><td>'+safeText(c.id)+'</td><td><b>'+safeText(c.name)+'</b></td><td>'+safeText(c.phone)+'</td><td>'+safeText(c.email||"—")+'</td><td>'+safeText(c.notes||"—")+'</td><td>'+(canEdit?'<button class="btn" onclick="editCustomer('+inlineArg(c.id)+')">Edit</button> ':'')+(canDelete?'<button class="btn" onclick="deleteCustomer('+inlineArg(c.id)+')">Delete</button>':'')+'</td></tr>').join("")||'<tr><td colspan="6" class="empty">'+t("noRecords")+'</td></tr>')+'</tbody></table></div></div>';
+  };
+  editCustomer = function(id){
+    if(!allowed("customers","u"))return notify(t("noPermission"));const c=customers.find(x=>x.id===id);if(!c)return notify(t("denied"));
+    openModal("Edit customer","Update customer contact details.",'<div class="field"><label>Name</label><input id="fCustomerName" maxlength="100" value="'+safeText(c.name)+'" required></div><div class="field"><label>Phone</label><input id="fCustomerPhone" maxlength="30" value="'+safeText(c.phone)+'" required></div><div class="field"><label>Email</label><input id="fCustomerEmail" type="email" maxlength="120" value="'+safeText(c.email||"")+'"></div><div class="field"><label>Notes</label><input id="fCustomerNotes" maxlength="240" value="'+safeText(c.notes||"")+'"></div>',"editCustomer:"+id);
+  };
+  deleteCustomer = function(id){if(!allowed("customers","d"))return notify(t("noPermission"));const c=customers.find(x=>x.id===id);if(!c)return notify(t("denied"));if(returnsData.some(r=>r.customer===c.name))return notify("This customer has return history and cannot be deleted.");if(!confirm("Delete customer "+c.name+"?"))return;customers=customers.filter(x=>x.id!==id);persistCollection("ububiko-customers-v1",customers);recordAudit("Customer deleted",c.name);render();notify(t("saved"));};
+
+  /* Wrap the existing save routine with strict validation and additional edit flows. */
+  saveModal = function(){
+    const kind=modalKind;
+    const num=id=>{const e=document.getElementById(id);return e?Number(e.value):NaN;};
+    const required=(id,label)=>{const e=document.getElementById(id);if(!e||!String(e.value||"").trim()){notify(label+" is required.");return false;}return true;};
+    const nonnegative=(id,label,allowZero=true)=>{const v=num(id);if(!Number.isFinite(v)||v<0||(!allowZero&&v<1)||!Number.isInteger(v)){notify(label+" must be a valid "+(allowZero?"non-negative":"positive")+" whole number.");return false;}return true;};
+    if(kind==="editCustomer:"+kind.slice(13)){
+      /* handled below; this branch intentionally never matches */
+    }
+    if(kind.startsWith("editCustomer:")){
+      if(!allowed("customers","u"))return notify(t("noPermission"));
+      const id=kind.slice("editCustomer:".length),c=customers.find(x=>x.id===id);
+      if(!c)return notify(t("denied"));
+      if(!required("fCustomerName","Name")||!required("fCustomerPhone","Phone"))return;
+      const name=document.getElementById("fCustomerName").value.trim(),phone=document.getElementById("fCustomerPhone").value.trim(),email=document.getElementById("fCustomerEmail").value.trim();
+      if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return notify("Enter a valid email address.");
+      if(customers.some(x=>x.id!==id&&x.phone.replace(/\s/g,"")===phone.replace(/\s/g,"")))return notify("That phone number is already registered.");
+      Object.assign(c,{name,phone,email,notes:document.getElementById("fCustomerNotes").value.trim()});
+      persistCollection("ububiko-customers-v1",customers);recordAudit("Customer updated",name);closeModal();render();notify(t("saved"));return;
+    }
+    if(kind==="edit:"+kind.slice(5)){
+      if(!allowed("products","u"))return notify(t("noPermission"));
+      if(!required("fName","Name")||!required("fSku","SKU")||!nonnegative("fQty","Quantity")||!nonnegative("fPrice","Price")||!nonnegative("fMin","Minimum quantity"))return;
+      const id=Number(kind.slice(5)),p=products.find(x=>x.id===id);if(!p)return notify(t("denied"));
+      const name=document.getElementById("fName").value.trim(),sku=document.getElementById("fSku").value.trim();
+      if(products.some(x=>x.id!==id&&x.sku.toLowerCase()===sku.toLowerCase()))return notify("SKU already exists.");
+      if(products.some(x=>x.id!==id&&x.name.toLowerCase()===name.toLowerCase()))return notify("A product with that name already exists.");
+      Object.assign(p,{name,sku,category:document.getElementById("fCategory").value.trim()||"General",qty:num("fQty"),price:num("fPrice"),min:num("fMin")});
+      persistCollection("ububiko-products-v1",products);recordAudit("Product updated",name);closeModal();render();notify(t("saved"));return;
+    }
+    if(kind==="product"){
+      if(!required("fName","Name")||!required("fCategory","Category")||!nonnegative("fQty","Quantity")||!nonnegative("fPrice","Price")||!nonnegative("fMin","Minimum quantity"))return;
+      const name=document.getElementById("fName").value.trim();
+      if(products.some(x=>x.name.toLowerCase()===name.toLowerCase()))return notify("A product with that name already exists.");
+    }
+    if(kind==="in"||kind==="out"||kind==="request"){
+      if(!nonnegative("fQty","Quantity",false))return;
+      if(!document.getElementById("fProduct")?.value)return notify("Select a product.");
+    }
+    if(kind==="customer"){
+      if(!required("fCustomerName","Name")||!required("fCustomerPhone","Phone"))return;
+      const phone=document.getElementById("fCustomerPhone").value.trim();
+      if(customers.some(x=>x.phone.replace(/\s/g,"")===phone.replace(/\s/g,"")))return notify("That phone number is already registered.");
+    }
+    if(kind==="return"){
+      if(!required("fReturnReason","Reason")||!nonnegative("fReturnQty","Quantity",false)||!nonnegative("fReturnRefund","Refund amount"))return;
+      const p=products.find(x=>x.name===document.getElementById("fReturnProduct").value),q=num("fReturnQty");
+      if(!p||q<1)return notify("Select a valid product and quantity.");
+    }
+    if(kind==="in"||kind==="out"){
+      const p=products.find(x=>x.id===num("fProduct"));
+      if(!p||p.archived)return notify("This product is unavailable.");
+      if(kind==="out"&&p.qty<num("fQty"))return notify(t("denied"));
+    }
+    oldSaveModal();
+  };
+
+  /* Fix IDs for new movement records even when older demo IDs are irregular. */
+  openMovementModal = function(out=false){
+    if(!allowed("movements","c"))return notify(t("noPermission"));
+    if(out&&role!=="Admin"&&role!=="Cashier")return notify(t("noPermission"));
+    const available=products.filter(p=>!p.archived&&(out?p.qty>0:true));
+    if(!available.length)return notify("No eligible products available.");
+    openModal(out?t("recordSale"):t("receiveStock"),t("moduleInfo"),'<div class="field"><label>'+t("product")+'</label><select id="fProduct">'+available.map(p=>'<option value="'+Number(p.id)+'">'+safeText(p.name)+' ('+fmt(p.qty)+')</option>').join("")+'</select></div><div class="field"><label>'+t("quantity")+'</label><input id="fQty" type="number" min="1" step="1" value="1" required></div>',out?"out":"in");
+  };
+  /* Replace the legacy reference generation after the legacy save routine. */
+  const legacySave = saveModal;
+  saveModal = function(){
+    const kind=modalKind;
+    if(kind==="in"||kind==="out"){
+      if(!allowed("movements","c"))return notify(t("noPermission"));
+      const p=products.find(x=>x.id===Number(document.getElementById("fProduct")?.value)),q=Number(document.getElementById("fQty")?.value);
+      if(!p||!Number.isInteger(q)||q<1||!Number.isFinite(q))return notify("Enter a valid quantity.");
+      if(kind==="out"&&p.qty<q)return notify(t("denied"));
+      p.qty += kind==="in"?q:-q;
+      const ref=makeRef("MV-",movements,4);
+      movements.unshift({id:ref,product:p.name,type:kind==="in"?"stockIn":"stockOut",qty:q,unitPrice:p.price,total:kind==="out"?q*p.price:0,date:new Date().toISOString().slice(0,10),by:role});
+      persistCollection("ububiko-products-v1",products);persistCollection("ububiko-movements-v1",movements);recordAudit(kind==="in"?"Stock received":"Stock issued",p.name+" "+q);closeModal();render();notify(t("saved"));return;
+    }
+    if(kind==="request"){
+      if(!allowed("requests","c"))return notify(t("noPermission"));
+      const p=products.find(x=>x.id===Number(document.getElementById("fProduct")?.value)),q=Number(document.getElementById("fQty")?.value);
+      if(!p||p.archived||!Number.isInteger(q)||q<1)return notify("Enter a valid request.");
+      requests.unshift({id:makeRef("RQ-",requests,4),product:p.name,qty:q,status:"pending",by:role,createdAt:new Date().toISOString()});
+      persistCollection("ububiko-requests-v1",requests);recordAudit("Request created",p.name+" x"+q);closeModal();render();notify(t("saved"));return;
+    }
+    legacySave();
+  };
+
+
+  assistantPage = function(){
+    if(!allowed("assistant"))return denied();
+    const prompts=role==="Cashier"?["What are total sales?","How many customers?","What refunds are approved?","How do I print sales report?"]:lang==="rw"?["Nshaka isukari","Ni ibihe bicuruzwa bike?","Hasigaye bingahe?","Ni ibihe byashize?","Igiciro cyumuceri ni ikihe?","Nabona nte raporo?"]:lang==="fr"?["Je cherche le sucre","Quels produits sont bas ?","Combien en reste-t-il ?","Quels produits sont épuisés ?","Quel est le prix du riz ?","Comment exporter un rapport ?"]:["I need sugar","Which products are low?","How many are left?","Which products are out of stock?","What is the price of rice?","How do I export a report?"];
+    return head(t("assistant"),t("moduleInfo"))+'<div class="panel"><div class="panel-body" style="min-height:320px"><div class="alert"><div><b>✧ UBUBIKO SMART AI</b><small>'+t("assistantIntro")+'</small></div><span class="status">STOCK-AWARE DEMO</span></div><div class="chat-suggestions">'+prompts.map(q=>'<button type="button" onclick="askQuick('+inlineArg(q)+')">'+safeText(q)+'</button>').join("")+'</div><div id="chatLog" style="padding:8px 2px;color:#53617a"><div class="chat-line assistant"><b>✧ UBUBIKO AI:</b> '+t("assistantIntro")+'</div></div><div class="toolbar"><input class="search" id="chatInput" style="flex:1" placeholder="'+t("ask")+'" onkeydown="if(event.key===\'Enter\')askAssistant()"><button class="btn btn-primary" onclick="askAssistant()">'+t("send")+'</button></div></div></div>';
+  };
+
+  /* Correct sales totals consistently and include complete operational exports. */
+  reportsPage = function(){
+    if(!allowed("reports"))return denied();
+    if(role==="Cashier"){const sales=movements.filter(m=>m.type==="stockOut"),total=salesTotal(movements);return head(t("reports"),t("moduleInfo"),'<button class="btn" onclick="printReport()">▤ Print / PDF</button><button class="btn btn-gold" onclick="exportReport()">↧ '+t("export")+'</button>')+'<div class="stats"><div class="stat"><div class="stat-top">Sales total</div><strong>'+fmt(total)+' RWF</strong></div><div class="stat"><div class="stat-top">Transactions</div><strong>'+sales.length+'</strong></div></div><div class="panel"><div class="panel-head"><h3>Sales report</h3></div>'+movementTable(sales)+'</div>';}
+    const val=products.reduce((a,p)=>a+(Number(p.qty)||0)*(Number(p.price)||0),0);
+    return head(t("reports"),t("moduleInfo"),'<button class="btn" onclick="printReport()">▤ Print / PDF</button><button class="btn btn-gold" onclick="exportReport()">↧ '+t("export")+'</button><button class="btn" onclick="exportBackup()">Backup JSON</button>')+'<div class="stats"><div class="stat"><div class="stat-top">'+t("totalProducts")+'</div><strong>'+products.length+'</strong></div><div class="stat"><div class="stat-top">'+t("totalValue")+'</div><strong>'+fmt(val)+' RWF</strong></div><div class="stat"><div class="stat-top">'+t("lowStock")+'</div><strong>'+products.filter(p=>!p.archived&&p.qty<=p.min).length+'</strong></div><div class="stat"><div class="stat-top">'+t("movements")+'</div><strong>'+movements.length+'</strong></div><div class="stat"><div class="stat-top">Sales total</div><strong>'+fmt(salesTotal(movements))+' RWF</strong></div></div><div class="panel"><div class="panel-head"><h3>'+t("recentActivity")+'</h3></div>'+movementTable(movements)+'</div>';
+  };
+
+  exportBackup = function(){
+    const data={app:"UBUBIKO SMART",formatVersion:1,exportedAt:new Date().toISOString(),products,movements,requests,returnsData,suppliers,customers,audit};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download="ububiko-smart-backup-"+new Date().toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);notify("Backup exported. Keep it somewhere safe.");
+  };
+  importBackup = function(input){
+    if(role!=="Admin")return notify(t("noPermission"));
+    const file=input?.files?.[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=()=>{try{
+      const d=JSON.parse(reader.result);
+      const keys=["products","movements","requests","returnsData","suppliers","customers","audit"];
+      if(d.app!=="UBUBIKO SMART"||d.formatVersion!==1||!keys.every(k=>Array.isArray(d[k])))throw new Error("Invalid backup format");
+      if(!confirm("Replace current inventory data with this backup? This cannot be undone.")){input.value="";return;}
+      products=d.products;movements=d.movements;requests=d.requests;returnsData=d.returnsData;suppliers=d.suppliers;customers=d.customers;audit=d.audit;
+      persistAll();recordAudit("Backup restored",file.name);render();notify("Backup restored successfully.");
+    }catch(e){notify("Backup file is invalid or unsupported.");}input.value="";};
+    reader.onerror=()=>notify("Could not read the backup file.");reader.readAsText(file);
+  };
+
+
+  usersPage = function(){
+    if(role!=="Admin")return denied(true);
+    const labels=lang==="rw"?{add:"＋ Ongeraho umukoresha",accounts:"Konti z'abakoresha",username:"Izina ukoresha",state:"Imiterere",active:"Irahari",blocked:"Yahagaritswe",block:"Hagarika",unblock:"Emeza kongera gukora"}:lang==="fr"?{add:"＋ Ajouter un utilisateur",accounts:"Comptes utilisateurs",username:"Nom d'utilisateur",state:"État",active:"Actif",blocked:"Bloqué",block:"Bloquer",unblock:"Débloquer"}:{add:"＋ Add user",accounts:"User accounts",username:"Username",state:"Status",active:"Active",blocked:"Blocked",block:"Block",unblock:"Unblock"};
+    const rows=userAccounts.map(u=>'<tr><td><b>'+safeText(u.username)+'</b>'+(u.builtIn?' <small>· Demo</small>':'')+'</td><td>'+safeText(u.role)+'</td><td><span class="status '+(u.blocked?'danger':'')+'">'+(u.blocked?labels.blocked:labels.active)+'</span></td><td>'+(u.username.toLowerCase()===String(currentUsername).toLowerCase()?'<span class="permission">'+(lang==="rw"?"Konti yawe":"Your account")+'</span>':'<button class="btn" onclick="openResetPasswordModal('+inlineArg(u.username)+')">'+(lang==="rw"?"Hindura ijambo":"Reset password")+'</button> <button class="btn '+(u.blocked?'btn-gold':'')+'" onclick="blockUser('+inlineArg(u.username)+')">'+(u.blocked?labels.unblock:labels.block)+'</button>')+'</td></tr>').join("");
+    return head(t("usersTitle"),t("moduleInfo"),'<button class="btn btn-gold" onclick="openUserModal()">'+labels.add+'</button>')+'<div class="panel"><div class="panel-head"><h3>'+labels.accounts+'</h3><span class="permission">'+userAccounts.length+' accounts</span></div><div class="table-wrap"><table><thead><tr><th>'+labels.username+'</th><th>'+t("role")+'</th><th>'+labels.state+'</th><th>'+t("action")+'</th></tr></thead><tbody>'+rows+'</tbody></table></div><div class="panel-body"><small>'+ (lang==="rw"?"Impinduka zibikwa muri browser ukoresha.":"Changes are stored in this browser only.")+'</small></div></div>';
+  };
+
+  /* Add local-only backup controls to Settings; no password records are exported. */
+  const baseSettingsPage=settingsPage;
+  settingsPage = function(){
+    const html=baseSettingsPage();
+    if(role!=="Admin")return html;
+    return html.replace('</div></div></div>', '</div></div><div class="panel"><div class="panel-head"><h3>Local data backup</h3></div><div class="panel-body"><p>Export or restore inventory data stored in this browser. User passwords and login accounts are never included in the backup.</p><div class="toolbar"><button class="btn btn-primary" type="button" onclick="exportBackup()">Export JSON backup</button><label class="btn" for="backupImport">Restore from JSON</label><input id="backupImport" type="file" accept="application/json,.json" style="display:none" onchange="importBackup(this)"></div><small>Restoring replaces the current local data. Export a backup before making major changes.</small></div></div></div>');
+  };
+
+  /* Better dialog ergonomics and safe keyboard dismissal. */
+  document.getElementById("modalBackdrop")?.setAttribute("role","presentation");
+  document.querySelector(".modal")?.setAttribute("role","dialog");
+  document.querySelector(".modal")?.setAttribute("aria-modal","true");
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.getElementById("modalBackdrop")?.classList.contains("open"))closeModal();});
+  const originalLogin=login;
+  login=function(){
+    const username=document.getElementById("loginUsername").value.trim().toLowerCase();
+    if(!username){document.getElementById("loginError").textContent=LOGIN_TEXT[lang].bad;return;}
+    originalLogin();
+  };
+})();
+
+
+
+/* Final data-integrity and output-safety pass */
+(function(){
+  const previousSave = saveModal;
+  const nextRef = (prefix, rows, width=3) => prefix + String(rows.reduce((n,x)=>Math.max(n,Number(String(x.id||"").replace(/\D/g,""))||0),0)+1).padStart(width,"0");
+  requestStatus = function(status){
+    const label=({pending:t("pending"),approved:t("approved"),processed:t("processed"),rejected:t("rejected"),restocked:"Restocked"})[status]||String(status||"—");
+    return '<span class="status '+(status==="pending"?"warn":status==="rejected"?"danger":status==="approved"?"info":"")+'">'+safeText(label)+'</span>';
+  };
+  auditPage = function(){
+    if(role!=="Admin"&&role!=="Manager")return denied(true);
+    return head(t("auditTitle"),t("moduleInfo"))+'<div class="panel"><div class="table-wrap"><table><thead><tr><th>'+t("date")+'</th><th>'+t("role")+'</th><th>'+t("action")+'</th><th>'+t("reference")+'</th></tr></thead><tbody>'+(audit.length?audit.map(a=>'<tr><td>'+safeText(a.date)+'</td><td>'+safeText(a.actor)+'</td><td>'+safeText(a.action)+'</td><td>'+safeText(a.target)+'</td></tr>').join(""):'<tr><td colspan="4" class="empty">'+t("noRecords")+'</td></tr>')+'</tbody></table></div><div class="panel-body"><span class="status">APPEND ONLY</span> <small>Audit records cannot be edited or deleted from this interface. Browser storage is not tamper-proof.</small></div></div>';
+  };
+  saveModal = function(){
+    const kind=modalKind;
+    const val=id=>Number(document.getElementById(id)?.value);
+    const text=id=>String(document.getElementById(id)?.value||"").trim();
+    const validInt=(id,min=0)=>Number.isInteger(val(id))&&val(id)>=min;
+    if(kind==="product"){
+      if(!allowed("products","c"))return notify(t("noPermission"));
+      if(!text("fName")||!text("fCategory")||!validInt("fQty")||!validInt("fPrice")||!validInt("fMin"))return notify("Complete all fields using valid non-negative whole numbers.");
+      if(products.some(p=>p.name.toLowerCase()===text("fName").toLowerCase()))return notify("A product with that name already exists.");
+      const id=Math.max(0,...products.map(p=>Number(p.id)||0))+1;
+      const sku=nextRef("UB-",products,3);
+      products.push({id,name:text("fName"),sku,category:text("fCategory"),qty:val("fQty"),min:val("fMin"),price:val("fPrice"),icon:"📦"});
+      persistCollection("ububiko-products-v1",products);recordAudit("Product created",text("fName"));closeModal();render();notify(t("saved"));return;
+    }
+    if(kind==="customer"){
+      if(!allowed("customers","c"))return notify(t("noPermission"));
+      if(!text("fCustomerName")||!text("fCustomerPhone"))return notify("Name and phone are required.");
+      const phone=text("fCustomerPhone");
+      if(customers.some(c=>String(c.phone||"").replace(/\s/g,"")===phone.replace(/\s/g,"")))return notify("That phone number is already registered.");
+      const email=text("fCustomerEmail");
+      if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return notify("Enter a valid email address.");
+      const id=nextRef("CUS-",customers,3);
+      customers.push({id,name:text("fCustomerName"),phone,email,notes:text("fCustomerNotes")});
+      persistCollection("ububiko-customers-v1",customers);recordAudit("Customer created",text("fCustomerName"));closeModal();render();notify(t("saved"));return;
+    }
+    if(kind==="return"){
+      if(!allowed("returns","c"))return notify(t("noPermission"));
+      const qty=val("fReturnQty"),refund=val("fReturnRefund"),product=text("fReturnProduct"),customer=text("fReturnCustomer"),reason=text("fReturnReason");
+      if(!customer||!product||!reason||!Number.isInteger(qty)||qty<1||!Number.isFinite(refund)||refund<0)return notify("Check customer, product, quantity, refund and reason.");
+      const id=nextRef("RET-",returnsData,3);
+      returnsData.unshift({id,customer,product,qty,reason,refund,status:"pending",date:new Date().toISOString().slice(0,10),by:role});
+      persistCollection("ububiko-returns-v1",returnsData);recordAudit("Return registered",product+" x"+qty);closeModal();render();notify(t("saved"));return;
+    }
+    previousSave();
+  };
+  /* Explicitly communicate the limits of a local-only demo. */
+  const note=document.getElementById("loginNote");
+  if(note)note.textContent=lang==="rw"?"Igerageza rya frontend gusa · Amakuru abikwa muri browser · Ntibikwiye amakuru y'ibanga.":lang==="fr"?"Démo frontend uniquement · Données stockées dans ce navigateur · Pas pour les données sensibles.":"Frontend-only demo · Data stays in this browser · Not for sensitive or production use.";
+})();
+
 </script>
 </body></html>
