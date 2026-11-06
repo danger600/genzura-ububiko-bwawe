@@ -78,7 +78,7 @@ const navItems=[["dashboard","▦"],["products","▣"],["movements","⇄"],["req
 const permissions={
 Admin:{dashboard:"r",products:"crud",movements:"cr",requests:"cru",returns:"cru",users:"crud",audit:"r",assistant:"r",suppliers:"crud",customers:"crud",reports:"r",settings:"crud"},
 Manager:{dashboard:"r",products:"cru",movements:"r",requests:"cru",returns:"cru",users:"-",audit:"operational",assistant:"r",suppliers:"cru",customers:"cru",reports:"r",settings:"-"},
-Cashier:{dashboard:"r",products:"r",movements:"sale",requests:"cr",returns:"cr",users:"-",audit:"-",assistant:"r",suppliers:"-",customers:"cru",reports:"own",settings:"-"},
+Cashier:{dashboard:"r",products:"-",movements:"sale",requests:"-",returns:"cr",users:"-",audit:"-",assistant:"r",suppliers:"-",customers:"cru",reports:"own",settings:"-"},
 Storekeeper:{dashboard:"r",products:"r",movements:"cr",requests:"cr",returns:"receive",users:"-",audit:"-",assistant:"r",suppliers:"r",customers:"-",reports:"stock",settings:"-"}
 };
 let role="Admin",currentUsername="",theme=(function(){try{return localStorage.getItem("ububiko-theme")==="dark"?"dark":"light"}catch(e){return "light"}})(),lang=(function(){try{const saved=localStorage.getItem("ububiko-language");return ["rw","en","fr"].includes(saved)?saved:"rw"}catch(e){return "rw"}})(),page="dashboard",filter="all",query="",modalKind="";
@@ -110,7 +110,7 @@ function login(){const u=document.getElementById("loginUsername").value.trim().t
 function logout(){recordAudit("Demo session ended",role);currentUsername="";document.getElementById("mainApp").classList.remove("authenticated");document.getElementById("loginShell").style.display="grid";document.getElementById("loginUsername").value="";document.getElementById("loginPassword").value="";document.getElementById("loginError").textContent="";updateLoginLanguage()}
 const t=k=>T[lang][k]||T.en[k]||k;
 const fmt=n=>new Intl.NumberFormat(lang==="rw"?"en-US":lang==="fr"?"fr-FR":"en-US").format(n);
-function allowed(module,act="r"){let p=permissions[role][module]||"-";if(p==="crud")return true;if(p==="r"||p==="operational"||p==="own"||p==="stock")return act==="r";if(p==="sale")return act==="r"||act==="c";if(p==="receive")return act==="r"||act==="c";return p.includes(act)&&act!=="r"?true:p.includes("r")&&act==="r"}
+function allowed(module,act="r"){const p=(permissions[role]||{})[module]||"-";if(p==="-")return false;if(act==="r")return true;if(p==="crud")return true;if((p==="sale"||p==="receive")&&act==="c")return true;return p.includes(act)}
 function notify(msg){let el=document.getElementById("toast");el.textContent=msg;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2600)}
 function recordAudit(action,target){audit.unshift({date:new Date().toLocaleString(),actor:role,action,target})}
 function toggleMenu(){document.getElementById("sidebar").classList.toggle("open");document.getElementById("scrim").classList.toggle("show")}
