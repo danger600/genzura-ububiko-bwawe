@@ -15,7 +15,7 @@ const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
-const allowedOrigins = (process.env.CLIENT_ORIGIN || "*")
+const allowedOrigins = (process.env.CLIENT_ORIGIN || (process.env.NODE_ENV === "production" ? "" : "http://127.0.0.1:5500,http://localhost:5500"))
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -62,6 +62,9 @@ app.use(errorHandler);
 const port = Number(process.env.PORT) || 10000;
 
 try {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    throw new Error("JWT_SECRET must be set to a random value of at least 32 characters.");
+  }
   await connectDatabase();
   app.listen(port, "0.0.0.0", () => {
     console.log(`UBUBIKO SMART API is running on port ${port}`);
