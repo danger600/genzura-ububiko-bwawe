@@ -39,6 +39,8 @@ This repository includes a root `render.yaml` Blueprint. Create a Blueprint depl
 
 Render generates `JWT_SECRET` from the Blueprint. Keep every secret in Render Environment settings, never in Git.
 
+MongoDB Atlas must also allow connections from Render. In Render, open the service, click **Connect → Outbound**, and copy the outbound IP ranges for the service region. In Atlas, go to **Database & Network Access → IP Access List** and add those CIDR ranges. A temporary `0.0.0.0/0` entry can unblock testing, but use a strong database password and restrict the list to Render ranges afterwards.
+
 The API health check is `/api/health`.
 
 ## Authentication

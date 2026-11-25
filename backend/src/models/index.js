@@ -38,7 +38,8 @@ const productSchema = new Schema({
   qty: { type: Number, required: true, default: 0, min: 0, validate: Number.isInteger },
   min: { type: Number, required: true, default: 0, min: 0, validate: Number.isInteger },
   price: { type: Number, required: true, default: 0, min: 0 },
-  icon: { type: String, default: "📦" }
+  icon: { type: String, default: "📦" },
+  archived: { type: Boolean, default: false }
 }, { timestamps: true });
 
 const movementSchema = new Schema({

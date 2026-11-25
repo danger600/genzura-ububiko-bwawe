@@ -60,6 +60,26 @@ router.post("/customers", allowRoles("Admin", "Manager", "Cashier"), async (req,
   } catch (error) { next(error); }
 });
 
+router.patch("/customers/:id", allowRoles("Admin", "Manager", "Cashier"), async (req, res, next) => {
+  try {
+    const fields = ["name", "phone", "email", "notes"];
+    const changes = Object.fromEntries(Object.entries(req.body).filter(([key]) => fields.includes(key)));
+    const customer = await Customer.findByIdAndUpdate(req.params.id, changes, { new: true, runValidators: true });
+    if (!customer) return res.status(404).json({ message: "Customer not found." });
+    await writeAudit(req.user, "CUSTOMER_UPDATED", customer.name);
+    res.json({ customer });
+  } catch (error) { next(error); }
+});
+
+router.delete("/customers/:id", allowRoles("Admin", "Manager"), async (req, res, next) => {
+  try {
+    const customer = await Customer.findByIdAndDelete(req.params.id);
+    if (!customer) return res.status(404).json({ message: "Customer not found." });
+    await writeAudit(req.user, "CUSTOMER_DELETED", customer.name);
+    res.json({ message: "Customer deleted." });
+  } catch (error) { next(error); }
+});
+
 // Returns
 router.get("/returns", allowRoles("Admin", "Manager", "Cashier", "Storekeeper"), async (_req, res, next) => {
   try {

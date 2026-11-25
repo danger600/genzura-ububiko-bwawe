@@ -556,5 +556,252 @@ updateLoginLanguage();
   if(note)note.textContent=lang==="rw"?"Igerageza rya frontend gusa · Amakuru abikwa muri browser · Ntibikwiye amakuru y'ibanga.":lang==="fr"?"Démo frontend uniquement · Données stockées dans ce navigateur · Pas pour les données sensibles.":"Frontend-only demo · Data stays in this browser · Not for sensitive or production use.";
 })();
 
+
+/* UBUBIKO SMART — live API connection layer.
+   Set the API URL with window.UBUBIKO_API_BASE, ?api=... or localStorage "ububiko-api-base". */
+(function(){
+  const params=new URLSearchParams(location.search);
+  const DEFAULT_API="https://ububiko-smart-api-wwnp.onrender.com/api";
+  const configured=params.get("api")||window.UBUBIKO_API_BASE||localStorage.getItem("ububiko-api-base")||DEFAULT_API;
+  const API_BASE=String(configured).replace(/\/+$/,"");
+  if(params.get("api"))localStorage.setItem("ububiko-api-base",API_BASE);
+  const TOKEN_KEY="ububiko-api-token";
+  let token=sessionStorage.getItem(TOKEN_KEY)||"";
+  let currentUserId="";
+
+  const request=async(path,options={},authenticated=true)=>{
+    const headers={...(options.headers||{})};
+    if(options.body&&!headers["Content-Type"])headers["Content-Type"]="application/json";
+    if(authenticated&&token)headers.Authorization="Bearer "+token;
+    const response=await fetch(API_BASE+path,{...options,headers});
+    let data={};
+    try{data=await response.json()}catch(_){}
+    if(response.status===401){
+      sessionStorage.removeItem(TOKEN_KEY);token="";
+      throw new Error(data.message||"Session expired. Please sign in again.");
+    }
+    if(!response.ok)throw new Error(data.message||("API request failed ("+response.status+")."));
+    return data;
+  };
+  const api=(path,options={})=>request(path,options,true);
+  const day=value=>value?new Date(value).toISOString().slice(0,10):"";
+  const text=id=>String(document.getElementById(id)?.value||"").trim();
+  const val=id=>Number(document.getElementById(id)?.value);
+  const fail=error=>notify(error.message||String(error));
+
+  const mapProduct=(p,i)=>({id:i+1,backendId:p._id,name:p.name,sku:p.sku,category:p.category,qty:Number(p.qty)||0,min:Number(p.min)||0,price:Number(p.price)||0,icon:p.icon||"📦",archived:!!p.archived});
+  const mapMovement=m=>({id:m.reference,backendId:m._id,product:m.productName||"Unknown product",type:m.type,qty:Number(m.qty)||0,unitPrice:Number(m.unitPrice)||0,total:Number(m.total)||0,date:day(m.date),by:m.byName||m.by||"—",role:m.by||""});
+  const mapRequest=r=>({id:r.reference,backendId:r._id,product:r.productName||"Unknown product",qty:Number(r.qty)||0,status:r.status,by:r.requestedByName||"—",createdAt:r.createdAt});
+  const mapReturn=r=>({id:r.reference,backendId:r._id,customer:r.customer||"—",product:r.productName||"Unknown product",qty:Number(r.qty)||0,reason:r.reason||"",refund:Number(r.refund)||0,status:r.status,date:day(r.date),by:r.byName||r.by||"—"});
+  const mapSupplier=s=>({id:s._id,name:s.name,contact:s.contact||"",phone:s.phone||"",email:s.email||"",items:s.items||"",status:s.status||"active",notes:s.notes||""});
+  const mapCustomer=c=>({id:c._id,name:c.name,phone:c.phone||"",email:c.email||"",notes:c.notes||""});
+  const mapUser=u=>({id:u._id||u.id,username:u.username,name:u.name||u.username,role:u.role,blocked:!!u.blocked,builtIn:false});
+  const mapAudit=a=>({date:new Date(a.createdAt||a.date).toLocaleString(),actor:a.actorName||a.actor||"—",action:a.action,target:a.target||""});
+
+  async function loadAll(){
+    const optional=promise=>promise.catch(()=>({}));
+    const [p,mv,rq,rt,su,cu,us,au]=await Promise.all([
+      api("/products"),api("/movements"),api("/requests"),api("/returns"),
+      optional(api("/suppliers")),optional(api("/customers")),
+      role==="Admin"?optional(api("/users")):Promise.resolve({}),
+      ["Admin","Manager"].includes(role)?optional(api("/audit")):Promise.resolve({})
+    ]);
+    products=(p.products||[]).map(mapProduct);
+    movements=(mv.movements||[]).map(mapMovement);
+    requests=(rq.requests||[]).map(mapRequest);
+    returnsData=(rt.returns||[]).map(mapReturn);
+    suppliers=(su.suppliers||[]).map(mapSupplier);
+    customers=(cu.customers||[]).map(mapCustomer);
+    if(role==="Admin")userAccounts=(us.users||[]).map(mapUser);
+    if(["Admin","Manager"].includes(role))audit=(au.audit||[]).map(mapAudit);
+  }
+
+  const findProduct=id=>products.find(x=>String(x.id)===String(id));
+  const productByForm=()=>findProduct(document.getElementById("fProduct")?.value);
+  const finish=async()=>{await loadAll();closeModal();render();notify(t("saved"))};
+
+  function showApp(user){
+    role=user.role;
+    currentUsername=user.username;
+    currentUserId=user.id||"";
+    page="dashboard";
+    document.getElementById("loginError").textContent="";
+    document.getElementById("loginPassword").value="";
+    document.getElementById("loginShell").style.display="none";
+    document.getElementById("mainApp").classList.add("authenticated");
+    render();
+  }
+
+  login=async function(){
+    const errorEl=document.getElementById("loginError");
+    errorEl.textContent="";
+    const username=document.getElementById("loginUsername").value.trim().toLowerCase();
+    const password=document.getElementById("loginPassword").value;
+    if(!username||!password){errorEl.textContent=LOGIN_TEXT[lang].bad;return}
+    try{
+      const data=await request("/auth/login",{method:"POST",body:JSON.stringify({username,password})},false);
+      token=data.token;
+      sessionStorage.setItem(TOKEN_KEY,token);
+      role=data.user.role;
+      currentUsername=data.user.username;
+      currentUserId=data.user.id||"";
+      await loadAll();
+      showApp(data.user);
+    }catch(error){errorEl.textContent=error.message||LOGIN_TEXT[lang].bad}
+  };
+
+  logout=function(){
+    sessionStorage.removeItem(TOKEN_KEY);token="";currentUserId="";
+    products=[];movements=[];requests=[];returnsData=[];suppliers=[];customers=[];audit=[];
+    document.getElementById("mainApp").classList.remove("authenticated");
+    document.getElementById("loginShell").style.display="grid";
+    document.getElementById("loginUsername").value="";
+    document.getElementById("loginPassword").value="";
+    document.getElementById("loginError").textContent="";
+    updateLoginLanguage();
+  };
+
+  recordAudit=function(){/* The API writes the server-side audit log. */};
+
+  const previousSave=saveModal;
+  saveModal=async function(){
+    const kind=modalKind;
+    try{
+      if(kind==="product"){
+        if(!allowed("products","c"))return notify(t("noPermission"));
+        if(!text("fName")||!text("fCategory")||!Number.isInteger(val("fQty"))||val("fQty")<0||!Number.isInteger(val("fPrice"))||val("fPrice")<0||!Number.isInteger(val("fMin"))||val("fMin")<0)return notify("Complete all fields with valid non-negative whole numbers.");
+        await api("/products",{method:"POST",body:JSON.stringify({name:text("fName"),sku:"UB-"+String(Date.now()).slice(-6),category:text("fCategory"),qty:val("fQty"),min:val("fMin"),price:val("fPrice")})});
+        return await finish();
+      }
+      if(kind.startsWith("edit:")){
+        if(!allowed("products","u"))return notify(t("noPermission"));
+        const p=findProduct(kind.slice(5));if(!p)return notify(t("denied"));
+        await api("/products/"+p.backendId,{method:"PATCH",body:JSON.stringify({name:text("fName")||p.name,sku:text("fSku")||p.sku,category:text("fCategory")||p.category,min:val("fMin"),price:val("fPrice")})});
+        const delta=val("fQty")-p.qty;
+        if(delta)await api("/movements",{method:"POST",body:JSON.stringify({productId:p.backendId,type:delta>0?"stockIn":"stockOut",qty:Math.abs(delta)})});
+        return await finish();
+      }
+      if(kind==="in"||kind==="out"){
+        if(!allowed("movements","c"))return notify(t("noPermission"));
+        const p=productByForm(),q=val("fQty");
+        if(!p||!Number.isInteger(q)||q<1)return notify("Enter a valid quantity.");
+        await api("/movements",{method:"POST",body:JSON.stringify({productId:p.backendId,type:kind==="in"?"stockIn":"stockOut",qty:q})});
+        return await finish();
+      }
+      if(kind==="request"){
+        if(!allowed("requests","c"))return notify(t("noPermission"));
+        const p=productByForm(),q=val("fQty");
+        if(!p||!Number.isInteger(q)||q<1)return notify("Enter a valid request.");
+        await api("/requests",{method:"POST",body:JSON.stringify({productId:p.backendId,qty:q})});
+        return await finish();
+      }
+      if(kind==="supplier"||kind.startsWith("editSupplier:")){
+        const id=kind.startsWith("editSupplier:")?kind.slice("editSupplier:".length):"";
+        if(!allowed("suppliers",id?"u":"c"))return notify(t("noPermission"));
+        if(!text("fSupplierName")||!text("fSupplierPhone"))return notify("Company name and phone are required.");
+        const body=JSON.stringify({name:text("fSupplierName"),contact:text("fSupplierContact"),phone:text("fSupplierPhone"),email:text("fSupplierEmail"),items:text("fSupplierItems"),status:text("fSupplierStatus")||"active",notes:text("fSupplierNotes")});
+        await api(id?"/suppliers/"+id:"/suppliers",{method:id?"PATCH":"POST",body});
+        return await finish();
+      }
+      if(kind==="customer"||kind.startsWith("editCustomer:")){
+        const id=kind.startsWith("editCustomer:")?kind.slice("editCustomer:".length):"";
+        if(!allowed("customers",id?"u":"c"))return notify(t("noPermission"));
+        if(!text("fCustomerName")||!text("fCustomerPhone"))return notify("Name and phone are required.");
+        const body=JSON.stringify({name:text("fCustomerName"),phone:text("fCustomerPhone"),email:text("fCustomerEmail"),notes:text("fCustomerNotes")});
+        await api(id?"/customers/"+id:"/customers",{method:id?"PATCH":"POST",body});
+        return await finish();
+      }
+      if(kind==="return"){
+        if(!allowed("returns","c"))return notify(t("noPermission"));
+        const p=products.find(x=>x.name===text("fReturnProduct"));
+        if(!p||!Number.isInteger(val("fReturnQty"))||val("fReturnQty")<1||!text("fReturnReason"))return notify("Check customer, product, quantity, refund and reason.");
+        await api("/returns",{method:"POST",body:JSON.stringify({productId:p.backendId,customer:text("fReturnCustomer"),qty:val("fReturnQty"),reason:text("fReturnReason"),refund:val("fReturnRefund")})});
+        return await finish();
+      }
+      if(kind.startsWith("resetPassword:")){
+        if(role!=="Admin")return notify(t("noPermission"));
+        const u=userAccounts.find(x=>x.username===kind.slice("resetPassword:".length));
+        if(!u)return notify(t("denied"));
+        if(text("fResetPass").length<8||text("fResetPass")!==text("fResetPassConfirm"))return notify("Passwords must match and contain at least 8 characters.");
+        await api("/users/"+u.id+"/password",{method:"PATCH",body:JSON.stringify({password:text("fResetPass")})});
+        return await finish();
+      }
+      if(kind==="user"){
+        if(role!=="Admin")return notify(t("noPermission"));
+        const username=text("fUserName").toLowerCase(),password=text("fUserPass"),userRole=text("fUserRole");
+        if(!/^[a-z0-9._-]{3,24}$/.test(username)||password.length<8)return notify("Enter a valid username and a password of at least 8 characters.");
+        await api("/users",{method:"POST",body:JSON.stringify({username,name:username,password,role:userRole})});
+        return await finish();
+      }
+      return previousSave();
+    }catch(error){fail(error)}
+  };
+
+  const setRequestStatus=async(id,status)=>{
+    const r=requests.find(x=>String(x.id)===String(id));if(!r)return;
+    try{await api("/requests/"+r.backendId+"/status",{method:"PATCH",body:JSON.stringify({status})});await loadAll();render();notify(t("saved"))}catch(error){fail(error)}
+  };
+  approveRequest=id=>setRequestStatus(id,"approved");
+  rejectRequest=id=>setRequestStatus(id,"rejected");
+  processRequest=id=>setRequestStatus(id,"processed");
+
+  const setReturnStatus=async(id,status)=>{
+    const r=returnsData.find(x=>String(x.id)===String(id));if(!r)return;
+    try{await api("/returns/"+r.backendId+"/status",{method:"PATCH",body:JSON.stringify({status})});await loadAll();render();notify(t("saved"))}catch(error){fail(error)}
+  };
+  approveReturn=id=>setReturnStatus(id,"approved");
+  receiveReturn=id=>setReturnStatus(id,"restocked");
+
+  blockUser=async function(username){
+    const u=userAccounts.find(x=>x.username===username);if(!u)return;
+    if(String(u.id)===String(currentUserId))return notify(lang==="rw"?"Ntushobora guhagarika konti winjiyemo.":"You cannot block the account currently in use.");
+    try{await api("/users/"+u.id+"/block",{method:"PATCH",body:JSON.stringify({blocked:!u.blocked})});await loadAll();render();notify(t("saved"))}catch(error){fail(error)}
+  };
+
+  deleteSupplier=async function(id){
+    const s=suppliers.find(x=>String(x.id)===String(id));if(!s||!confirm("Delete supplier "+s.name+"?"))return;
+    try{await api("/suppliers/"+id,{method:"DELETE"});await loadAll();render();notify(t("saved"))}catch(error){fail(error)}
+  };
+
+  deleteCustomer=async function(id){
+    const c=customers.find(x=>String(x.id)===String(id));if(!c||!confirm("Delete customer "+c.name+"?"))return;
+    try{await api("/customers/"+id,{method:"DELETE"});await loadAll();render();notify(t("saved"))}catch(error){fail(error)}
+  };
+
+  archiveProduct=async function(id){
+    const p=findProduct(id);if(!p)return;
+    if(!p.archived&&p.qty>0)return notify(lang==="rw"?"Banza usohore stock isigaye mbere yo guhisha igicuruzwa.":"Move remaining stock before archiving this product.");
+    try{await api("/products/"+p.backendId,{method:"PATCH",body:JSON.stringify({archived:!p.archived})});await loadAll();render();notify(t("saved"))}catch(error){fail(error)}
+  };
+
+  changeOwnPassword=async function(){
+    if(text("newOwnPassword")!==text("confirmOwnPassword"))return notify("New passwords do not match.");
+    if(text("newOwnPassword").length<8)return notify("New password must be at least 8 characters.");
+    try{
+      await api("/auth/change-password",{method:"POST",body:JSON.stringify({currentPassword:text("currentOwnPassword"),newPassword:text("newOwnPassword")})});
+      ["currentOwnPassword","newOwnPassword","confirmOwnPassword"].forEach(id=>{const e=document.getElementById(id);if(e)e.value=""});
+      notify(lang==="rw"?"Ijambo ry'ibanga ryawe ryahinduwe.":"Your password has been updated.");
+    }catch(error){fail(error)}
+  };
+
+  importBackup=function(){notify("Backup restore is disabled in connected mode. Use the API-backed data instead.")};
+
+  async function init(){
+    const note=document.getElementById("loginNote");
+    try{
+      const response=await fetch(API_BASE+"/health");
+      const data=await response.json();
+      if(note)note.textContent="UBUBIKO API · "+(data.database==="connected"?"database online":"database offline")+" · "+API_BASE;
+    }catch(error){
+      if(note)note.textContent="API unavailable at "+API_BASE+" · Add ?api=https://your-api/api to connect.";
+    }
+    if(token){
+      try{const me=await api("/auth/me");role=me.user.role;currentUsername=me.user.username;currentUserId=me.user.id||"";await loadAll();showApp(me.user)}
+      catch{sessionStorage.removeItem(TOKEN_KEY);token=""}
+    }
+  }
+  init();
+})();
+
 </script>
 </body></html>

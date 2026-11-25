@@ -33,7 +33,7 @@ router.post("/", allowRoles("Admin", "Manager", "Storekeeper"), async (req, res,
 
 router.patch("/:id", allowRoles("Admin", "Manager"), async (req, res, next) => {
   try {
-    const allowed = ["name", "sku", "category", "min", "price", "icon"];
+    const allowed = ["name", "sku", "category", "min", "price", "icon", "archived"];
     const changes = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowed.includes(key)));
     if (Object.keys(changes).length === 0) {
       return res.status(400).json({ message: "No editable product fields were provided." });

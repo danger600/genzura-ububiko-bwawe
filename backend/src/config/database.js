@@ -7,6 +7,17 @@ export async function connectDatabase() {
     throw new Error("MONGODB_URI is missing. Add your MongoDB Atlas connection string.");
   }
 
+  let parsed;
+  try {
+    parsed = new URL(uri);
+  } catch {
+    throw new Error("MONGODB_URI is not a valid MongoDB connection string.");
+  }
+
+  if (!parsed.pathname || parsed.pathname === "/") {
+    throw new Error("MONGODB_URI must include a database name, for example .../ububiko_smart?retryWrites=true&w=majority");
+  }
+
   mongoose.set("strictQuery", true);
 
   await mongoose.connect(uri, {

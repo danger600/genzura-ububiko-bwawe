@@ -290,6 +290,173 @@ $("#themeBtn").onclick=()=>{document.body.classList.toggle("dark");$("#themeBtn"
 $("#langBtn").onclick=()=>changeLanguage(lang==="rw"?"en":lang==="en"?"fr":"rw");
 $("#loginForm").addEventListener("submit",e=>{e.preventDefault();const username=$("#loginUsername").value.trim().toLowerCase(),password=$("#loginPassword").value;const account=demoAccounts.find(a=>a.username===username&&a.password===password);if(!account){$("#loginError").style.display="block";auditLog.unshift({id:Date.now(),time:new Date().toLocaleString(),user:username||"Unknown",role:"Guest",action:"LOGIN FAILED",detail:"Invalid credentials"});localStorage.setItem("ububikoAudit",JSON.stringify(auditLog.slice(0,200)));return}activeUser={name:account.name,role:account.role};sessionStorage.setItem("ububikoActiveUser",JSON.stringify(activeUser));$("#loginError").style.display="none";audit("LOGIN","Successful sign in");showAuthenticatedApp();toast("Welcome, "+activeUser.name)}); 
 if(activeUser){audit("SESSION RESTORED","Active browser session");showAuthenticatedApp()}else{showAuthenticatedApp()}
+
+/* Live API connection bridge. Keeps the existing UI but uses the backend when reachable. */
+(function(){
+  const params=new URLSearchParams(location.search);
+  const DEFAULT_API="https://ububiko-smart-api-wwnp.onrender.com/api";
+  const configured=params.get("api")||window.UBUBIKO_API_BASE||localStorage.getItem("ububiko-api-base")||DEFAULT_API;
+  const API_BASE=String(configured).replace(/\/+$/,"");
+  if(params.get("api"))localStorage.setItem("ububiko-api-base",API_BASE);
+  const TOKEN_KEY="ububiko-api-token-pro";
+  let token=sessionStorage.getItem(TOKEN_KEY)||"";
+  const req=async(path,options={},auth=true)=>{
+    const headers={...(options.headers||{})};
+    if(options.body&&!headers["Content-Type"])headers["Content-Type"]="application/json";
+    if(auth&&token)headers.Authorization="Bearer "+token;
+    const res=await fetch(API_BASE+path,{...options,headers});
+    let body={}; try{body=await res.json()}catch{}
+    if(res.status===401){sessionStorage.removeItem(TOKEN_KEY);token="";throw new Error(body.message||"Session expired. Please sign in again.")}
+    if(!res.ok)throw new Error(body.message||("API request failed ("+res.status+")"));
+    return body;
+  };
+  const api=(path,options={})=>req(path,options,true);
+  const day=v=>v?new Date(v).toISOString().slice(0,10):new Date().toISOString().slice(0,10);
+  const byId=id=>db.products.find(p=>String(p.id)===String(id));
+  const byBackendId=id=>db.products.find(p=>String(p.backendId)===String(id));
+
+  function mapFromApi(data){
+    db.products=(data.products||[]).map((p,i)=>({id:i+1,backendId:p._id,name:p.name,category:p.category,unit:p.unit||"Pcs",qty:Number(p.qty)||0,min:Number(p.min)||0,price:Number(p.price)||0,archived:!!p.archived}));
+    db.movements=(data.movements||[]).map(m=>({id:m._id,backendId:m._id,date:day(m.date),product:m.productName||"",type:m.type==="stockIn"?"IN":"OUT",qty:Number(m.qty)||0,note:m.byName||m.by||""}));
+    db.requests=(data.requests||[]).map(r=>({id:r._id,backendId:r._id,requester:r.requestedByName||"—",product:r.productName||"",qty:Number(r.qty)||0,status:(r.status||"pending").replace(/^./,c=>c.toUpperCase())}));
+    db.returns=(data.returns||[]).map(r=>({id:r._id,backendId:r._id,product:r.productName||"",qty:Number(r.qty)||0,reason:r.reason||"",date:day(r.date),status:r.status}));
+    db.suppliers=(data.suppliers||[]).map(s=>({id:s._id,backendId:s._id,name:s.name,phone:s.phone||"",email:s.email||""}));
+    db.customers=(data.customers||[]).map(c=>({id:c._id,backendId:c._id,name:c.name,phone:c.phone||"",email:c.email||""}));
+  }
+
+  async function loadAll(){
+    const optional=p=>p.catch(()=>({}));
+    const isAdmin=activeUser?.role==="Admin";
+    const isManager=["Admin","Store Manager"].includes(activeUser?.role);
+    const [products,movements,requests,returns,suppliers,customers]=await Promise.all([
+      api("/products"),api("/movements"),api("/requests"),api("/returns"),
+      optional(api("/suppliers")),optional(api("/customers"))
+    ]);
+    mapFromApi({products:products.products,movements:movements.movements,requests:requests.requests,returns:returns.returns,suppliers:suppliers.suppliers,customers:customers.customers});
+    if(isAdmin||isManager){
+      const audit=await optional(api("/audit"));
+      if(Array.isArray(audit.audit)) auditLog=audit.audit.map(a=>({id:a._id,time:new Date(a.createdAt||Date.now()).toLocaleString(),user:a.actorName||"—",role:a.role||"",action:a.action||"",detail:a.target||""}));
+    }
+  }
+
+  async function finish(msg="Saved successfully."){
+    await loadAll(); closeModal(); render(); toast(msg);
+  }
+
+  const loginForm=document.getElementById("loginForm");
+  loginForm.replaceWith(loginForm.cloneNode(true));
+  document.getElementById("loginForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const username=document.getElementById("loginUsername").value.trim().toLowerCase();
+    const password=document.getElementById("loginPassword").value;
+    const err=document.getElementById("loginError"); err.style.display="none";
+    try{
+      const data=await req("/auth/login",{method:"POST",body:JSON.stringify({username,password})},false);
+      token=data.token; sessionStorage.setItem(TOKEN_KEY,token);
+      activeUser={name:data.user.name||data.user.username,role:data.user.role==="Manager"?"Store Manager":data.user.role,username:data.user.username,id:data.user.id};
+      sessionStorage.setItem("ububikoActiveUser",JSON.stringify(activeUser));
+      await loadAll();
+      showAuthenticatedApp();
+      toast("Welcome, "+activeUser.name);
+    }catch(error){err.textContent=error.message||"Incorrect username or password."; err.style.display="block";}
+  });
+
+  const oldLogout=logout;
+  logout=function(){sessionStorage.removeItem(TOKEN_KEY);token="";oldLogout();};
+
+  const oldRemove=removeRow;
+  removeRow=async function(p,id){
+    if(!guard(p))return;
+    const map={products:["/products/","product"],suppliers:["/suppliers/","supplier"],customers:["/customers/","customer"],requests:["/requests/","request"],returns:["/returns/","return"]};
+    const row=(db[p]||[]).find(x=>String(x.id)===String(id));
+    if(!row) return oldRemove(p,id);
+    if(!confirm("Delete this record?"))return;
+    try{
+      if(p==="products") await api("/products/"+row.backendId,{method:"DELETE"});
+      else if(p==="suppliers") await api("/suppliers/"+row.backendId,{method:"DELETE"});
+      else if(p==="customers") await api("/customers/"+row.backendId,{method:"DELETE"});
+      else return toast("This record cannot be deleted from the connected API.");
+      await finish("Record deleted.");
+    }catch(error){toast(error.message)}
+  };
+
+  const oldApprove=approve;
+  approve=async function(id){
+    if(!guard("requests"))return;
+    const r=db.requests.find(x=>String(x.id)===String(id));
+    if(!r) return oldApprove(id);
+    try{await api("/requests/"+r.backendId+"/status",{method:"PATCH",body:JSON.stringify({status:"approved"})}); await finish("Request approved.")}catch(error){toast(error.message)}
+  };
+
+  const oldSave=saveModal.onclick;
+  saveModal.onclick=async ()=>{
+    const c=configs[modalConfig]; if(!c||!guard(modalConfig))return;
+    try{
+      if(modalConfig==="products"){
+        const name=$("#field-products-name").value.trim(), category=$("#field-products-category").value.trim();
+        const unit=$("#field-products-unit").value.trim(), qty=Number($("#field-products-qty").value), min=Number($("#field-products-min").value), price=Number($("#field-products-price").value);
+        await api("/products",{method:"POST",body:JSON.stringify({name,sku:"UB-"+Date.now().toString().slice(-6),category,qty,min,price,icon:"📦"})});
+        return await finish();
+      }
+      if(modalConfig==="stock"){
+        const product=byId(db.products.find(p=>p.name===$("#field-stock-product").value)?.id) || db.products.find(p=>p.name===$("#field-stock-product").value);
+        const type=$("#field-stock-type").value, qty=Number($("#field-stock-qty").value);
+        if(!product) return toast("Select a valid product.");
+        await api("/movements",{method:"POST",body:JSON.stringify({productId:product.backendId,type:type==="IN"?"stockIn":"stockOut",qty})});
+        return await finish();
+      }
+      if(modalConfig==="requests"){
+        const product=db.products.find(p=>p.name===$("#field-requests-product").value);
+        const qty=Number($("#field-requests-qty").value);
+        if(!product) return toast("Select a valid product.");
+        await api("/requests",{method:"POST",body:JSON.stringify({productId:product.backendId,qty})});
+        return await finish();
+      }
+      if(modalConfig==="suppliers"){
+        await api("/suppliers",{method:"POST",body:JSON.stringify({name:$("#field-suppliers-name").value.trim(),phone:$("#field-suppliers-phone").value.trim(),email:$("#field-suppliers-email").value.trim(),status:"active"})});
+        return await finish();
+      }
+      if(modalConfig==="customers"){
+        await api("/customers",{method:"POST",body:JSON.stringify({name:$("#field-customers-name").value.trim(),phone:$("#field-customers-phone").value.trim(),email:$("#field-customers-email").value.trim()})});
+        return await finish();
+      }
+      if(modalConfig==="returns"){
+        const product=db.products.find(p=>p.name===$("#field-returns-product").value);
+        await api("/returns",{method:"POST",body:JSON.stringify({productId:product.backendId,customer:"Walk-in customer",qty:Number($("#field-returns-qty").value),reason:$("#field-returns-reason").value.trim(),refund:0})});
+        return await finish();
+      }
+      return oldSave();
+    }catch(error){toast(error.message)}
+  };
+
+  resetDemo=function(){toast("Reset is disabled while connected to the live API.")};
+  exportData=async function(){
+    try{
+      const data={products:db.products,movements:db.movements,requests:db.requests,returns:db.returns,suppliers:db.suppliers,customers:db.customers,exportedAt:new Date().toISOString(),source:API_BASE};
+      const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+      const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="ububiko-smart-api-export.json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }catch(e){toast("Export failed.")}
+  };
+
+  async function init(){
+    const note=document.querySelector(".demo-note");
+    try{
+      const h=await fetch(API_BASE+"/health"); const hd=await h.json();
+      if(note) note.innerHTML='<b>CONNECTED:</b> Using live API '+escapeHTML(API_BASE)+' · database '+escapeHTML(hd.database||"unknown");
+      if(token){
+        const me=await api("/auth/me");
+        activeUser={name:me.user.name||me.user.username,role:me.user.role==="Manager"?"Store Manager":me.user.role,username:me.user.username,id:me.user.id};
+        sessionStorage.setItem("ububikoActiveUser",JSON.stringify(activeUser));
+        await loadAll(); showAuthenticatedApp();
+      } else {
+        showAuthenticatedApp();
+      }
+    }catch(e){
+      if(note) note.innerHTML='<b>API OFFLINE:</b> Could not reach '+escapeHTML(API_BASE)+'. Showing local demo mode. Add ?api=https://your-api/api to configure.';
+    }
+  }
+  init();
+})();
 </script>
 </body>
 </html>

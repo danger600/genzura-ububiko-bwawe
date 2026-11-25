@@ -15,10 +15,24 @@ const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
-const allowedOrigins = (process.env.CLIENT_ORIGIN || (process.env.NODE_ENV === "production" ? "" : "http://127.0.0.1:5500,http://localhost:5500"))
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const normalizeOrigin = (value) => {
+  const raw = String(value).trim().replace(/\/+$/, "");
+  if (raw === "*") return raw;
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return raw;
+  }
+};
+
+const allowedOrigins = [...new Set(
+  (process.env.CLIENT_ORIGIN || (process.env.NODE_ENV === "production" ? "" : "http://127.0.0.1:5500,http://localhost:5500"))
+    .split(",")
+    .map(normalizeOrigin)
+    .filter(Boolean)
+)];
+
+console.log(`Allowed browser origins: ${allowedOrigins.join(", ") || "(none)"}`);
 
 app.use(helmet());
 app.use(cors({
@@ -34,10 +48,11 @@ app.use(cors({
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (_req, res) => {
-  res.status(200).json({
-    status: "ok",
+  const databaseConnected = mongoose.connection.readyState === 1;
+  res.status(databaseConnected ? 200 : 503).json({
+    status: databaseConnected ? "ok" : "degraded",
     service: "UBUBIKO SMART API",
-    database: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    database: databaseConnected ? "connected" : "disconnected",
     timestamp: new Date().toISOString()
   });
 });
