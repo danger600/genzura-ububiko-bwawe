@@ -30,8 +30,17 @@ const normalizeOrigin = (value) => {
   }
 };
 
+const defaultOrigins = [
+  "https://genzura-ububiko-bwawe.vercel.app",
+  "https://genzura-ububiko-bwawe.onrender.com",
+  "https://ububikobwawe.netlify.app",
+  "http://127.0.0.1:5500",
+  "http://localhost:5500",
+  process.env.RENDER_EXTERNAL_URL || ""
+].filter(Boolean);
+
 const allowedOrigins = [...new Set(
-  (process.env.CLIENT_ORIGIN || (process.env.NODE_ENV === "production" ? "" : "http://127.0.0.1:5500,http://localhost:5500"))
+  (process.env.CLIENT_ORIGIN || (process.env.NODE_ENV === "production" ? defaultOrigins.join(",") : defaultOrigins.join(",")))
     .split(",")
     .map(normalizeOrigin)
     .filter(Boolean)
@@ -41,16 +50,20 @@ console.log(`Allowed browser origins: ${allowedOrigins.join(", ") || "(none)"}`)
 
 // The single-file frontend uses inline scripts/styles, so the default CSP would block it.
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({
+const corsOptions = {
   origin(origin, callback) {
-    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(normalizeOrigin(origin))) {
       return callback(null, true);
     }
-    return callback(new Error("This website is not allowed to access the UBUBIKO API."));
+    // Return false instead of throwing so CORS rejection is clear and does not mask as a server error.
+    return callback(null, false);
   },
   methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204
+};
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (_req, res) => {

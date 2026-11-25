@@ -120,7 +120,8 @@ const PERMS={
 let lang=(()=>{try{const v=localStorage.getItem("ububiko-lang");return ["rw","en","fr"].includes(v)?v:"rw"}catch{return "rw"}})();
 let theme=(()=>{try{return localStorage.getItem("ububiko-theme")==="dark"?"dark":"light"}catch{return "light"}})();
 let token=sessionStorage.getItem("ububiko-token")||"";
-let apiBase=(()=>{try{return localStorage.getItem("ububiko-api-base")||""}catch{return ""}})();
+const DEFAULT_API="https://genzura-ububiko-bwawe.onrender.com/api";
+let apiBase=(()=>{try{const v=localStorage.getItem("ububiko-api-base")||"";if(!v||/ububiko-smart-api-wwnp\.onrender\.com/i.test(v))return DEFAULT_API;return v}catch{return DEFAULT_API}})();
 let user=null,page="dashboard",query="",filter="all",data={products:[],movements:[],requests:[],returns:[],suppliers:[],customers:[],users:[],audit:[]};
 let modalAction=null;
 
@@ -134,7 +135,7 @@ const day=v=>{if(!v)return"—";const d=new Date(v);return isNaN(d)?"—":d.toIS
 function toast(msg){const el=$("toast");el.textContent=msg;el.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("show"),2800)}
 function allowed(mod,act="r"){const p=(PERMS[user?.role]||{})[mod]||"-";if(p==="-")return false;if(act==="r")return true;if(p==="crud")return true;if(p==="sale"||p==="receive")return act===p;return p.includes(act)}
 function normalizeBase(v){v=String(v||"").trim().replace(/\/+$/,"");if(!v)return "";return /\/api$/i.test(v)?v:v+"/api"}
-function effectiveBase(){return normalizeBase(apiBase)||(location.origin+"/api")}
+function effectiveBase(){return normalizeBase(apiBase)||DEFAULT_API}
 function applyTheme(){document.documentElement.setAttribute("data-theme",theme);const label=theme==="dark"?(lang==="rw"?"Urumuri":lang==="fr"?"Clair":"Light"):(lang==="rw"?"Umwijima":lang==="fr"?"Sombre":"Dark");const icon=theme==="dark"?"☀️":"🌙";["topTheme","lgTheme"].forEach(id=>{const el=$(id);if(el)el.innerHTML=icon+' <span>'+label+"</span>"})}
 function applyLang(){document.documentElement.lang=lang;$("lgLang").value=lang;$("topLang").value=lang;$("loginTitle").textContent=tr("loginTitle");$("loginSub").textContent=tr("loginSub");$("lbUser").textContent=tr("user");$("lbPass").textContent=tr("password");$("lbApi").textContent=tr("apiUrl");$("lbLang").textContent=lang==="rw"?"Ururimi / Language / Langue":lang==="fr"?"Langue / Language / Ururimi":"Language / Ururimi / Langue";$("lgBtn").textContent=tr("login");$("lgNote").textContent=tr("apiHint");$("navLabel").textContent=tr("workspace");$("signedIn").textContent=tr("signedIn");$("logoutBtn").textContent=tr("logout");applyTheme();if($("app").classList.contains("auth"))render()}
 
