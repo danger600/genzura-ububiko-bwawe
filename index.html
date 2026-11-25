@@ -74,11 +74,10 @@ html[data-theme="dark"] .chat-line{background:#1d2b41;border-color:#35445d;color
   <form id="loginForm" autocomplete="on">
    <div class="login-field"><label id="lbUser" for="lgUser">Izina ukoresha</label><input id="lgUser" autocomplete="username" required placeholder="Username"></div>
    <div class="login-field"><label id="lbPass" for="lgPass">Ijambo ry'ibanga</label><input id="lgPass" type="password" autocomplete="current-password" required placeholder="Password"></div>
-   <div class="login-field"><label id="lbApi" for="lgApi">API URL</label><input id="lgApi" placeholder="https://your-api.onrender.com/api" spellcheck="false"></div>
    <button class="login-submit" id="lgBtn" type="submit">Injira →</button><div class="login-error" id="lgError" role="alert"></div>
   </form>
   <div class="login-bottom"><label id="lbLang" for="lgLang">Ururimi / Language / Langue</label><select id="lgLang"><option value="rw">🇷🇼 Ikinyarwanda</option><option value="en">🇬🇧 English</option><option value="fr">🇫🇷 Français</option></select><button class="btn theme-toggle" id="lgTheme" type="button">🌙 <span>Dark</span></button></div>
-  <p class="login-note" id="lgNote">Enter the API URL once; it is saved in this browser.</p>
+  <p class="login-note" id="lgNote">Connecting to this server's /api endpoint…</p>
  </div>
 </section>
 
@@ -120,9 +119,9 @@ const PERMS={
 let lang=(()=>{try{const v=localStorage.getItem("ububiko-lang");return ["rw","en","fr"].includes(v)?v:"rw"}catch{return "rw"}})();
 let theme=(()=>{try{return localStorage.getItem("ububiko-theme")==="dark"?"dark":"light"}catch{return "light"}})();
 let token=sessionStorage.getItem("ububiko-token")||"";
-let apiBase=(()=>{try{return localStorage.getItem("ububiko-api-base")||""}catch{return ""}})();
 let user=null,page="dashboard",query="",filter="all",data={products:[],movements:[],requests:[],returns:[],suppliers:[],customers:[],users:[],audit:[]};
 let modalAction=null;
+const API_BASE="/api";
 
 /* ---------- helpers ---------- */
 const $=id=>document.getElementById(id);
@@ -133,10 +132,8 @@ const fmt=n=>new Intl.NumberFormat(lang==="fr"?"fr-FR":"en-US").format(Number(n)
 const day=v=>{if(!v)return"—";const d=new Date(v);return isNaN(d)?"—":d.toISOString().slice(0,10)};
 function toast(msg){const el=$("toast");el.textContent=msg;el.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("show"),2800)}
 function allowed(mod,act="r"){const p=(PERMS[user?.role]||{})[mod]||"-";if(p==="-")return false;if(act==="r")return true;if(p==="crud")return true;if(p==="sale"||p==="receive")return act===p;return p.includes(act)}
-function normalizeBase(v){v=String(v||"").trim().replace(/\/+$/,"");if(!v)return "";return /\/api$/i.test(v)?v:v+"/api"}
-function effectiveBase(){return normalizeBase(apiBase)||(location.origin+"/api")}
 function applyTheme(){document.documentElement.setAttribute("data-theme",theme);const label=theme==="dark"?(lang==="rw"?"Urumuri":lang==="fr"?"Clair":"Light"):(lang==="rw"?"Umwijima":lang==="fr"?"Sombre":"Dark");const icon=theme==="dark"?"☀️":"🌙";["topTheme","lgTheme"].forEach(id=>{const el=$(id);if(el)el.innerHTML=icon+' <span>'+label+"</span>"})}
-function applyLang(){document.documentElement.lang=lang;$("lgLang").value=lang;$("topLang").value=lang;$("loginTitle").textContent=tr("loginTitle");$("loginSub").textContent=tr("loginSub");$("lbUser").textContent=tr("user");$("lbPass").textContent=tr("password");$("lbApi").textContent=tr("apiUrl");$("lbLang").textContent=lang==="rw"?"Ururimi / Language / Langue":lang==="fr"?"Langue / Language / Ururimi":"Language / Ururimi / Langue";$("lgBtn").textContent=tr("login");$("lgNote").textContent=tr("apiHint");$("navLabel").textContent=tr("workspace");$("signedIn").textContent=tr("signedIn");$("logoutBtn").textContent=tr("logout");applyTheme();if($("app").classList.contains("auth"))render()}
+function applyLang(){document.documentElement.lang=lang;$("lgLang").value=lang;$("topLang").value=lang;$("loginTitle").textContent=tr("loginTitle");$("loginSub").textContent=tr("loginSub");$("lbUser").textContent=tr("user");$("lbPass").textContent=tr("password");$("lbLang").textContent=lang==="rw"?"Ururimi / Language / Langue":lang==="fr"?"Langue / Language / Ururimi":"Language / Ururimi / Langue";$("lgBtn").textContent=tr("login");$("navLabel").textContent=tr("workspace");$("signedIn").textContent=tr("signedIn");$("logoutBtn").textContent=tr("logout");applyTheme();if($("app").classList.contains("auth"))render()}
 
 /* ---------- API ---------- */
 async function api(path,opts={}){
@@ -145,7 +142,7 @@ async function api(path,opts={}){
  if(fetchOpts.body&&!headers["Content-Type"])headers["Content-Type"]="application/json";
  if(!skipAuth&&token)headers.Authorization="Bearer "+token;
  let r;
- try{r=await fetch(effectiveBase()+path,{...fetchOpts,headers})}catch{throw new Error("Cannot reach the API. Check the API URL.")}
+ try{r=await fetch(API_BASE+path,{...fetchOpts,headers})}catch{throw new Error("Cannot reach the API. Check the server connection.")}
  let body={};try{body=await r.json()}catch{}
  if(r.status===401){logoutLocal();throw new Error(body.message||"Session expired. Please sign in again.")}
  if(!r.ok)throw new Error(body.message||"Request failed ("+r.status+")");
@@ -178,8 +175,6 @@ $("loginForm").addEventListener("submit",async e=>{
  e.preventDefault();$("lgError").textContent="";
  const username=$("lgUser").value.trim().toLowerCase(),password=$("lgPass").value;
  if(!username||!password){$("lgError").textContent="Username and password are required.";return}
- apiBase=normalizeBase($("lgApi").value||apiBase);
- try{localStorage.setItem("ububiko-api-base",apiBase)}catch{}
  try{
   const r=await api("/auth/login",{method:"POST",body:JSON.stringify({username,password}),skipAuth:true});
   token=r.token;sessionStorage.setItem("ububiko-token",token);user=r.user;$("lgPass").value="";
@@ -305,7 +300,7 @@ views.assistant=()=>head(tr("assistant"),tr("moduleInfo"))+`<div class="panel"><
 
 views.settings=()=>{
  queueMicrotask(()=>{const el=$("setLang");if(el)el.onchange=e=>{lang=e.target.value;try{localStorage.setItem("ububiko-lang",lang)}catch{}applyLang()}});
- return head(tr("settings"),tr("moduleInfo"))+`<div class="panels"><div class="panel"><div class="panel-head"><h3>${esc(tr("settings"))}</h3></div><div class="panel-body"><div class="field"><label>${esc(lang==="rw"?"Ururimi":lang==="fr"?"Langue":"Language")}</label><select id="setLang"><option value="rw"${lang==="rw"?" selected":""}>🇷🇼 Kinyarwanda</option><option value="en"${lang==="en"?" selected":""}>🇬🇧 English</option><option value="fr"${lang==="fr"?" selected":""}>🇫🇷 Français</option></select></div><div class="field"><label>Theme</label><button class="btn" onclick="toggleTheme()">${theme==="dark"?"☀️ Light":"🌙 Dark"}</button></div><div class="field"><label>${esc(tr("apiUrl"))}</label><input id="setApi" value="${esc(apiBase)}"><small class="hint">${esc(tr("apiHint"))}</small></div><button class="btn btn-primary" onclick="saveApi()">${esc(tr("save"))}</button></div></div>
+ return head(tr("settings"),tr("moduleInfo"))+`<div class="panels"><div class="panel"><div class="panel-head"><h3>${esc(tr("settings"))}</h3></div><div class="panel-body"><div class="field"><label>${esc(lang==="rw"?"Ururimi":lang==="fr"?"Langue":"Language")}</label><select id="setLang"><option value="rw"${lang==="rw"?" selected":""}>🇷🇼 Kinyarwanda</option><option value="en"${lang==="en"?" selected":""}>🇬🇧 English</option><option value="fr"${lang==="fr"?" selected":""}>🇫🇷 Français</option></select></div><div class="field"><label>Theme</label><button class="btn" onclick="toggleTheme()">${theme==="dark"?"☀️ Light":"🌙 Dark"}</button></div></div></div>
  <div class="panel"><div class="panel-head"><h3>${esc(tr("password"))}</h3></div><div class="panel-body"><div class="field"><label>Current</label><input id="curPass" type="password"></div><div class="field"><label>New</label><input id="newPass" type="password" minlength="8"></div><button class="btn btn-primary" onclick="changePassword()">${esc(tr("save"))}</button></div></div></div>`;
 };
 function denied(){return head(tr(page),tr("moduleInfo"))+`<div class="panel"><div class="panel-body empty">🔒 ${esc(tr("noPermission"))}</div></div>`}
@@ -339,7 +334,6 @@ function openUser(){if(!allowed("users","c"))return toast(tr("noPermission"));
 function resetPassword(id){if(!allowed("users","u"))return toast(tr("noPermission"));
  openModal("Reset password","",f("New password","fPass","password","",'minlength="8" required'),async()=>{if(v("fPass").length<8){toast("Password must be at least 8 characters.");return false}await api(`/users/${id}/password`,{method:"PATCH",body:JSON.stringify({password:v("fPass")})});return true})}
 async function changePassword(){if(v("newPass").length<8)return toast("New password must be at least 8 characters.");try{await api("/auth/change-password",{method:"POST",body:JSON.stringify({currentPassword:v("curPass"),newPassword:v("newPass")})});toast(tr("saved"))}catch(e){toast(e.message)}}
-async function saveApi(){apiBase=normalizeBase(v("setApi"));try{localStorage.setItem("ububiko-api-base",apiBase)}catch{}toast(apiBase?tr("saved")+": "+apiBase:"Same-origin /api");if(user){try{await reload()}catch(e){toast(e.message)}}else render()}
 function exportCsv(){const rows=[["Reference","Product","Type","Qty","Amount","Date","By"],...data.movements.map(m=>[m.id,m.product,m.type,m.qty,m.total||m.qty*m.unitPrice,m.date,m.by])];const csv=rows.map(r=>r.map(c=>`"${String(c??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");const url=URL.createObjectURL(new Blob(["\uFEFF",csv],{type:"text/csv;charset=utf-8"}));const a=document.createElement("a");a.href=url;a.download="ububiko-report.csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function ask(q){const log=$("chatLog");if(!log)return;let text=q||v("chatInput");if(!text)return;let ans;
  const lower=text.toLowerCase(),low=active().filter(p=>p.qty<=p.min);
@@ -351,13 +345,10 @@ function ask(q){const log=$("chatLog");if(!log)return;let text=q||v("chatInput")
  log.insertAdjacentHTML("beforeend",`<div class="chat-line user">${esc(text)}</div><div class="chat-line assistant">${esc(ans)}</div>`);$("chatInput").value=""}
 
 /* ---------- boot ---------- */
-const initialBase=effectiveBase();
-$("lgApi").value=apiBase;
-$("lgApi").placeholder=initialBase;
 applyLang();
 (async()=>{
- try{const r=await fetch(initialBase+"/health");if(!r.ok)throw new Error("Health check failed");const d=await r.json();$("lgNote").textContent=tr("connected")+" · "+(d.database||"")+" · "+initialBase}
- catch{$("lgNote").textContent=tr("offline")+" · "+tr("apiHint")}
+ try{const r=await fetch(API_BASE+"/health");if(!r.ok)throw new Error("Health check failed");const d=await r.json();$("lgNote").textContent=tr("connected")+" · "+(d.database||"")+" · "+API_BASE}
+ catch{$("lgNote").textContent=tr("offline")+" · same-origin /api"}
  if(token){try{const me=await api("/auth/me");user=me.user;await loadAll();showApp()}catch{logoutLocal()}}
 })();
 </script>

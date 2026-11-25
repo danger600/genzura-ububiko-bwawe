@@ -1,4 +1,6 @@
 import "dotenv/config";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -14,6 +16,9 @@ import { notFound, errorHandler } from "./src/middleware/errors.js";
 const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
+
+const clientDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const clientFile = path.join(clientDir, "index.html");
 
 const normalizeOrigin = (value) => {
   const raw = String(value).trim().replace(/\/+$/, "");
@@ -34,7 +39,8 @@ const allowedOrigins = [...new Set(
 
 console.log(`Allowed browser origins: ${allowedOrigins.join(", ") || "(none)"}`);
 
-app.use(helmet());
+// The single-file frontend uses inline scripts/styles, so the default CSP would block it.
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
   origin(origin, callback) {
     if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
@@ -70,6 +76,11 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api", stockRoutes);
 app.use("/api", operationsRoutes);
+
+// Same-origin frontend. The /api routes above always take priority.
+app.get(["/", "/index.html"], (_req, res, next) => {
+  res.sendFile(clientFile, (error) => (error ? next(error) : undefined));
+});
 
 app.use(notFound);
 app.use(errorHandler);

@@ -1,6 +1,6 @@
 # UBUBIKO SMART API
 
-Node.js + Express + MongoDB Atlas backend for the existing UBUBIKO SMART frontend.
+Node.js + Express + MongoDB Atlas backend for the UBUBIKO SMART frontend. The service also serves the root `index.html`, so the frontend and API share the same origin at `/api`.
 
 ## Features
 
@@ -41,7 +41,7 @@ Render generates `JWT_SECRET` from the Blueprint. Keep every secret in Render En
 
 MongoDB Atlas must also allow connections from Render. In Render, open the service, click **Connect → Outbound**, and copy the outbound IP ranges for the service region. In Atlas, go to **Database & Network Access → IP Access List** and add those CIDR ranges. A temporary `0.0.0.0/0` entry can unblock testing, but use a strong database password and restrict the list to Render ranges afterwards.
 
-The API health check is `/api/health`.
+The API health check is `/api/health`. Open the service root URL to load the frontend; it calls `/api` on the same origin.
 
 ## Authentication
 
