@@ -9,7 +9,7 @@
 <style>
 :root{--navy:#101b35;--navy2:#172746;--gold:#e7b84b;--gold2:#f5d98b;--ink:#172033;--muted:#738097;--line:#e8edf4;--paper:#f4f6fa;--white:#fff;--green:#16865d;--red:#c64d54;--blue:#4778c7;--shadow:0 12px 34px #17274612}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;transition:.3s}
-button,input,select{font:inherit}button{cursor:pointer}a{color:inherit}
+button,input,select{font:inherit}button{cursor:pointer}a{color:inherit}[hidden]{display:none!important}
 .app{min-height:100vh;display:none}.app.auth{display:flex}
 .sidebar{width:258px;background:linear-gradient(180deg,var(--navy),#0c152a);color:#dce5f5;position:fixed;inset:0 auto 0 0;z-index:20;display:flex;flex-direction:column;padding:22px 15px;transition:transform .25s}
 .brand{display:flex;align-items:center;gap:11px;padding:2px 9px 24px;border-bottom:1px solid #ffffff18}
@@ -82,7 +82,7 @@ html[data-theme="dark"] .chat-line{background:#1d2b41;border-color:#35445d;color
  </div>
 </section>
 
-<div class="app" id="app">
+<div class="app" id="app" hidden inert aria-hidden="true">
  <aside class="sidebar" id="sidebar">
   <div class="brand"><div class="mark">U</div><div><strong>UBUBIKO SMART</strong><small>INVENTORY MANAGEMENT</small></div></div>
   <div class="nav-label" id="navLabel">Workspace</div><nav class="nav" id="nav"></nav>
@@ -97,8 +97,8 @@ html[data-theme="dark"] .chat-line{background:#1d2b41;border-color:#35445d;color
   <footer class="footer"><span>By Remy, Divin, Mireille and L5ideas</span><span>·</span><strong>UBUBIKO SMART</strong><span>·</span><span id="footNote">Smart inventory management</span></footer>
  </main>
 </div>
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-<div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true"><h2 id="modalTitle"></h2><p id="modalDesc"></p><form id="modalForm"><div id="modalFields"></div><div class="modal-actions"><button class="btn" type="button" id="modalCancel">Cancel</button><button class="btn btn-primary" type="submit" id="modalSave">Save</button></div></form></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden inert></div>
+<div class="modal-backdrop" id="modalBackdrop" hidden inert aria-hidden="true"><div class="modal" role="dialog" aria-modal="true"><h2 id="modalTitle"></h2><p id="modalDesc"></p><form id="modalForm"><div id="modalFields"></div><div class="modal-actions"><button class="btn" type="button" id="modalCancel">Cancel</button><button class="btn btn-primary" type="submit" id="modalSave">Save</button></div></form></div></div>
 
 <script>
 "use strict";
@@ -131,8 +131,8 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const tr=k=>I18N[lang][k]||I18N.en[k]||k;
 const money=n=>new Intl.NumberFormat(lang==="fr"?"fr-FR":"en-US").format(Number(n)||0)+" RWF";
 const fmt=n=>new Intl.NumberFormat(lang==="fr"?"fr-FR":"en-US").format(Number(n)||0);
-const day=v=>{if(!v)return"—";const d=new Date(v);return isNaN(d)?"—":d.toISOString().slice(0,10)};
-function toast(msg){const el=$("toast");el.textContent=msg;el.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("show"),2800)}
+const day=v=>{if(!v)return"—";const d=new Date(v);return isNaN(d.getTime())?"—":d.toISOString().slice(0,10)};
+function toast(msg){const el=$("toast");el.hidden=false;el.removeAttribute("inert");el.textContent=msg;el.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>{el.classList.remove("show");el.hidden=true;el.setAttribute("inert","")},2800)}
 function allowed(mod,act="r"){const p=(PERMS[user?.role]||{})[mod]||"-";if(p==="-")return false;if(act==="r")return true;if(p==="crud")return true;if(p==="sale"||p==="receive")return act===p;return p.includes(act)}
 function normalizeBase(v){v=String(v||"").trim().replace(/\/+$/,"");if(!v)return "";return /\/api$/i.test(v)?v:v+"/api"}
 function effectiveBase(){return normalizeBase(apiBase)||DEFAULT_API}
@@ -146,9 +146,9 @@ async function api(path,opts={}){
  if(fetchOpts.body&&!headers["Content-Type"])headers["Content-Type"]="application/json";
  if(!skipAuth&&token)headers.Authorization="Bearer "+token;
  let r;
- try{r=await fetch(effectiveBase()+path,{...fetchOpts,headers})}catch{throw new Error("Cannot reach the API. Check the API URL.")}
+ try{r=await fetch(effectiveBase()+path,{...fetchOpts,headers})}catch{throw new Error("Cannot reach the API at "+effectiveBase()+". Check the API URL and CORS settings.")}
  let body={};try{body=await r.json()}catch{}
- if(r.status===401){logoutLocal();throw new Error(body.message||"Session expired. Please sign in again.")}
+ if(r.status===401){if(!skipAuth)logoutLocal();throw new Error(body.message||"Session expired. Please sign in again.")}
  if(!r.ok)throw new Error(body.message||"Request failed ("+r.status+")");
  return body;
 }
@@ -172,22 +172,26 @@ async function loadAll(){
 const prodById=id=>data.products.find(p=>String(p.id)===String(id));
 const prodByForm=()=>prodById($("fProduct")?.value);
 async function reload(){await loadAll();closeModal();render()}
-function logoutLocal(){token="";sessionStorage.removeItem("ububiko-token");user=null;Object.keys(data).forEach(k=>data[k]=[]);$("app").classList.remove("auth");$("loginShell").style.display="grid";$("lgError").textContent="";applyLang()}
+function logoutLocal(){token="";sessionStorage.removeItem("ububiko-token");user=null;Object.keys(data).forEach(k=>data[k]=[]);page="dashboard";query="";filter="all";$("app").classList.remove("auth");$("app").hidden=true;$("app").setAttribute("inert","");$("app").setAttribute("aria-hidden","true");$("loginShell").hidden=false;$("lgError").textContent="";$("lgPass").value="";closeModal();applyLang()}
 
 /* ---------- auth ---------- */
 $("loginForm").addEventListener("submit",async e=>{
- e.preventDefault();$("lgError").textContent="";
+ e.preventDefault();if($("lgBtn").disabled)return;
+ $("lgError").textContent="";
  const username=$("lgUser").value.trim().toLowerCase(),password=$("lgPass").value;
  if(!username||!password){$("lgError").textContent="Username and password are required.";return}
- apiBase=normalizeBase($("lgApi").value||apiBase);
- try{localStorage.setItem("ububiko-api-base",apiBase)}catch{}
+ const btn=$("lgBtn");btn.disabled=true;btn.textContent="…";
  try{
+  apiBase=normalizeBase($("lgApi").value||apiBase);
+  try{localStorage.setItem("ububiko-api-base",apiBase)}catch{}
   const r=await api("/auth/login",{method:"POST",body:JSON.stringify({username,password}),skipAuth:true});
   token=r.token;sessionStorage.setItem("ububiko-token",token);user=r.user;$("lgPass").value="";
-  await loadAll();showApp();
+  showApp();
+  try{await loadAll();render()}catch(err){toast(err.message||"Some inventory data could not be loaded.")}
  }catch(err){$("lgError").textContent=err.message||"Sign in failed."}
+ finally{btn.disabled=false;btn.textContent=tr("login")}
 });
-function showApp(){page="dashboard";$("loginShell").style.display="none";$("app").classList.add("auth");render()}
+function showApp(){page="dashboard";query="";filter="all";$("loginShell").hidden=true;$("app").hidden=false;$("app").removeAttribute("inert");$("app").removeAttribute("aria-hidden");$("app").classList.add("auth");render()}
 $("logoutBtn").addEventListener("click",logoutLocal);
 $("topLang").addEventListener("change",e=>{lang=e.target.value;try{localStorage.setItem("ububiko-lang",lang)}catch{}applyLang()});
 $("lgLang").addEventListener("change",e=>{lang=e.target.value;try{localStorage.setItem("ububiko-lang",lang)}catch{}applyLang()});
@@ -199,8 +203,8 @@ function toggleTheme(){theme=theme==="dark"?"light":"dark";try{localStorage.setI
 function toggleMenu(){$("sidebar").classList.toggle("open");$("scrim").classList.toggle("show")}
 
 /* ---------- modal ---------- */
-function openModal(title,desc,fields,action){$("modalTitle").textContent=title;$("modalDesc").textContent=desc;$("modalFields").innerHTML=fields;modalAction=action;$("modalBackdrop").classList.add("open");const first=$("modalFields").querySelector("input,select");if(first)first.focus()}
-function closeModal(){$("modalBackdrop").classList.remove("open");modalAction=null}
+function openModal(title,desc,fields,action){$("modalTitle").textContent=title;$("modalDesc").textContent=desc;$("modalFields").innerHTML=fields;modalAction=action;const el=$("modalBackdrop");el.hidden=false;el.removeAttribute("inert");el.removeAttribute("aria-hidden");el.classList.add("open");const first=$("modalFields").querySelector("input,select");if(first)first.focus()}
+function closeModal(){const el=$("modalBackdrop");el.classList.remove("open");el.hidden=true;el.setAttribute("inert","");el.setAttribute("aria-hidden","true");modalAction=null}
 $("modalCancel").addEventListener("click",closeModal);
 $("modalBackdrop").addEventListener("click",e=>{if(e.target===$("modalBackdrop"))closeModal()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
@@ -288,7 +292,7 @@ views.customers=()=>{
 
 views.users=()=>{
  if(!allowed("users"))return denied();
- const rows=data.users.map(u=>`<tr><td><b>${esc(u.username)}</b></td><td>${esc(u.role)}</td><td>${badge(u.blocked?"rejected":"available")}</td><td>${u.id===user.id?`<span class="status">You</span>`:`<button class="btn" data-reset="${esc(u.id)}">Reset password</button> <button class="btn" data-block="${esc(u.id)}">${u.blocked?"Unblock":"Block"}</button>`}</td></tr>`).join("");
+ const rows=data.users.map(u=>`<tr><td><b>${esc(u.username)}</b></td><td>${esc(u.role)}</td><td>${badge(u.blocked?"rejected":"available")}</td><td>${String(u.id)===String(user.id)?`<span class="status">You</span>`:`<button class="btn" data-reset="${esc(u.id)}">Reset password</button> <button class="btn" data-block="${esc(u.id)}">${u.blocked?"Unblock":"Block"}</button>`}</td></tr>`).join("");
  const html=head(tr("users"),tr("moduleInfo"),allowed("users","c")?`<button class="btn btn-gold" onclick="openUser()">＋ ${esc(tr("add"))}</button>`:"")+`<div class="panel">${table([tr("user"),tr("role"),tr("status"),tr("action")],rows)}</div>`;
  queueMicrotask(()=>{document.querySelectorAll("[data-block]").forEach(b=>b.onclick=()=>blockUser(b.dataset.block));document.querySelectorAll("[data-reset]").forEach(b=>b.onclick=()=>resetPassword(b.dataset.reset))});
  return html;
@@ -330,7 +334,7 @@ function openMovement(out){if(!allowed("movements",out?"sale":"receive"))return 
 function openRequest(){if(!allowed("requests","c"))return toast(tr("noPermission"));const list=active();if(!list.length)return toast(tr("noRecords"));
  openModal(tr("newRequest"),tr("moduleInfo"),sel(tr("product"),"fProduct",list.map(p=>[p.id,p.name]))+f(tr("quantity"),"fQty","number",1,'min="1" step="1"'),async()=>{const p=prodByForm(),q=n("fQty");if(!p||!Number.isInteger(q)||q<1){toast("Enter a valid quantity.");return false}await api("/requests",{method:"POST",body:JSON.stringify({productId:p.bid,qty:q})});return true})}
 function openReturn(){if(!allowed("returns","c"))return toast(tr("noPermission"));
- openModal(tr("returns"),"",f("Customer","fReturnCustomer","text","","required")+sel(tr("product"),"fReturnProduct",active().map(p=>[p.name,p.name]))+f(tr("quantity"),"fReturnQty","number",1,'min="1" step="1"')+f("Refund (RWF)","fReturnRefund","number",0,'min="0"')+f("Reason","fReturnReason","text","","required"),async()=>{const p=active().find(x=>x.name===v("fReturnProduct")),q=n("fReturnQty");if(!p||!Number.isInteger(q)||q<1||!v("fReturnCustomer")||!v("fReturnReason")){toast("Check the return details.");return false}await api("/returns",{method:"POST",body:JSON.stringify({productId:p.bid,customer:v("fReturnCustomer"),qty:q,reason:v("fReturnReason"),refund:n("fReturnRefund")})});return true})}
+ openModal(tr("returns"),"",f("Customer","fReturnCustomer","text","","required")+sel(tr("product"),"fReturnProduct",active().map(p=>[p.bid,p.name]))+f(tr("quantity"),"fReturnQty","number",1,'min="1" step="1"')+f("Refund (RWF)","fReturnRefund","number",0,'min="0"')+f("Reason","fReturnReason","text","","required"),async()=>{const p=active().find(x=>String(x.bid)===v("fReturnProduct")),q=n("fReturnQty");if(!p||!Number.isInteger(q)||q<1||!v("fReturnCustomer")||!v("fReturnReason")){toast("Check the return details.");return false}await api("/returns",{method:"POST",body:JSON.stringify({productId:p.bid,customer:v("fReturnCustomer"),qty:q,reason:v("fReturnReason"),refund:n("fReturnRefund")})});return true})}
 function openSupplier(id=null){if(!allowed("suppliers",id?"u":"c"))return toast(tr("noPermission"));const s=id?data.suppliers.find(x=>x.id===id):null;
  openModal(s?"Edit supplier":tr("add"),"",f(tr("name"),"fName","text",s?.name||"","required")+f("Contact","fContact","text",s?.contact||"")+f("Phone","fPhone","text",s?.phone||"","required")+f("Email","fEmail","email",s?.email||"")+f("Items","fItems","text",s?.items||"")+sel(tr("status"),"fStatus",[["active","Active"],["inactive","Inactive"]],s?.status||"active")+f("Notes","fNotes","text",s?.notes||""),async()=>{if(!v("fName")||!v("fPhone")){toast("Company name and phone are required.");return false}const body=JSON.stringify({name:v("fName"),contact:v("fContact"),phone:v("fPhone"),email:v("fEmail"),items:v("fItems"),status:v("fStatus"),notes:v("fNotes")});await api(s?`/suppliers/${s.id}`:"/suppliers",{method:s?"PATCH":"POST",body});return true})}
 function openCustomer(id=null){if(!allowed("customers",id?"u":"c"))return toast(tr("noPermission"));const c=id?data.customers.find(x=>x.id===id):null;
@@ -359,7 +363,7 @@ applyLang();
 (async()=>{
  try{const r=await fetch(initialBase+"/health");if(!r.ok)throw new Error("Health check failed");const d=await r.json();$("lgNote").textContent=tr("connected")+" · "+(d.database||"")+" · "+initialBase}
  catch{$("lgNote").textContent=tr("offline")+" · "+tr("apiHint")}
- if(token){try{const me=await api("/auth/me");user=me.user;await loadAll();showApp()}catch{logoutLocal()}}
+ if(token){try{const me=await api("/auth/me");user=me.user;showApp();try{await loadAll();render()}catch(err){toast(err.message||"Some inventory data could not be loaded.")}}catch{logoutLocal()}}
 })();
 </script>
 </body>
