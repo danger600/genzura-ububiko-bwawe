@@ -35,9 +35,11 @@ The API runs at `http://localhost:10000` by default. Check `/api/health`.
 This repository includes a root `render.yaml` Blueprint. Create a Blueprint deployment from this repository. Set:
 
 - `MONGODB_URI`: the MongoDB Atlas connection string
-- `CLIENT_ORIGIN`: the exact deployed frontend URL (no trailing slash)
+- `CLIENT_ORIGIN`: extra browser origins allowed by CORS, separated by commas (optional). The production frontend, its Vercel/Netlify preview deployments and localhost are allowed by default; `*` wildcards such as `https://my-project-*.vercel.app` are supported.
 
 Render generates `JWT_SECRET` from the Blueprint. Keep every secret in Render Environment settings, never in Git.
+
+After changing `render.yaml`, deploy the Blueprint update (or update `CLIENT_ORIGIN` in Render → Environment) and redeploy so the new CORS rules take effect. The API serves the frontend same-origin at its root as a fallback, so `https://genzura-ububiko-bwawe.onrender.com/` works even if a Vercel deployment is unavailable.
 
 MongoDB Atlas must also allow connections from Render. In Render, open the service, click **Connect → Outbound**, and copy the outbound IP ranges for the service region. In Atlas, go to **Database & Network Access → IP Access List** and add those CIDR ranges. A temporary `0.0.0.0/0` entry can unblock testing, but use a strong database password and restrict the list to Render ranges afterwards.
 
@@ -83,4 +85,4 @@ Login body:
 | PATCH | `/api/users/:id/password` | Reset a user's password (Admin) |
 | GET | `/api/audit` | View audit history |
 
-This API is added on a separate branch. The existing static frontend is not yet switched from browser demo storage to the API. Complete the frontend integration before using this as the live school inventory system.
+The static frontend in the repository root is already connected to this API. It defaults to `https://genzura-ububiko-bwawe.onrender.com/api` and stores the JWT in `sessionStorage`; no cookies are used, so CORS does not need credentials.

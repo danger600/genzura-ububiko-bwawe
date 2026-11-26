@@ -20,9 +20,10 @@ app.set("trust proxy", 1);
 const clientDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const clientFile = path.join(clientDir, "index.html");
 
+// Exact origins and wildcard patterns (for example https://*.vercel.app) are both supported.
 const normalizeOrigin = (value) => {
   const raw = String(value).trim().replace(/\/+$/, "");
-  if (raw === "*") return raw;
+  if (raw.includes("*")) return raw;
   try {
     return new URL(raw).origin;
   } catch {
@@ -32,29 +33,40 @@ const normalizeOrigin = (value) => {
 
 const defaultOrigins = [
   "https://genzura-ububiko-bwawe.vercel.app",
+  // Vercel preview deployments use names like genzura-ububiko-bwawe-<hash>-<scope>.vercel.app.
+  "https://genzura-ububiko-bwawe-*.vercel.app",
   "https://genzura-ububiko-bwawe.onrender.com",
   "https://ububikobwawe.netlify.app",
+  "https://*--ububikobwawe.netlify.app",
   "http://127.0.0.1:5500",
   "http://localhost:5500",
   process.env.RENDER_EXTERNAL_URL || ""
 ].filter(Boolean);
 
+// CLIENT_ORIGIN adds to the defaults so a stale deployment value cannot lock out the live app.
 const allowedOrigins = [...new Set(
-  (process.env.CLIENT_ORIGIN || (process.env.NODE_ENV === "production" ? defaultOrigins.join(",") : defaultOrigins.join(",")))
-    .split(",")
+  [...defaultOrigins, ...(process.env.CLIENT_ORIGIN || "").split(",")]
     .map(normalizeOrigin)
     .filter(Boolean)
 )];
 
 console.log(`Allowed browser origins: ${allowedOrigins.join(", ") || "(none)"}`);
 
+const isOriginAllowed = (origin) => {
+  if (!origin || allowedOrigins.includes("*")) return true;
+  const normalized = normalizeOrigin(origin);
+  return allowedOrigins.some((allowed) => {
+    if (!allowed.includes("*")) return allowed === normalized;
+    const pattern = allowed.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+    return new RegExp(`^${pattern}$`, "i").test(normalized);
+  });
+};
+
 // The single-file frontend uses inline scripts/styles, so the default CSP would block it.
 app.use(helmet({ contentSecurityPolicy: false }));
 const corsOptions = {
   origin(origin, callback) {
-    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(normalizeOrigin(origin))) {
-      return callback(null, true);
-    }
+    if (isOriginAllowed(origin)) return callback(null, true);
     // Return false instead of throwing so CORS rejection is clear and does not mask as a server error.
     return callback(null, false);
   },
@@ -62,8 +74,8 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization"],
   optionsSuccessStatus: 204
 };
+// cors() handles OPTIONS preflight requests itself, including the POST /api/auth/login preflight.
 app.use(cors(corsOptions));
-app.options(/.*/, cors(corsOptions));
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (_req, res) => {
