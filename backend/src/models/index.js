@@ -16,10 +16,19 @@ const userSchema = new Schema({
     match: /^[a-z0-9._-]+$/
   },
   name: { type: String, required: true, trim: true, maxlength: 80 },
+  email: { type: String, lowercase: true, trim: true, match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
   role: { type: String, enum: roles, required: true, default: "Storekeeper" },
-  passwordHash: { type: String, required: true, select: false },
+  passwordHash: { type: String, select: false },
+  oauthIds: {
+    google: { type: String, default: null },
+    github: { type: String, default: null }
+  },
   blocked: { type: Boolean, default: false }
 }, { timestamps: true });
+
+userSchema.index({ email: 1 }, { unique: true, sparse: true });
+userSchema.index({ "oauthIds.google": 1 }, { unique: true, sparse: true });
+userSchema.index({ "oauthIds.github": 1 }, { unique: true, sparse: true });
 
 userSchema.pre("save", async function () {
   if (this.isModified("passwordHash")) {
@@ -28,6 +37,7 @@ userSchema.pre("save", async function () {
 });
 
 userSchema.methods.checkPassword = function (password) {
+  if (!this.passwordHash) return Promise.resolve(false);
   return bcrypt.compare(password, this.passwordHash);
 };
 

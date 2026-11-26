@@ -7,7 +7,9 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import mongoose from "mongoose";
 import { connectDatabase } from "./src/config/database.js";
+import { allowedOrigins, isOriginAllowed } from "./src/utils/origins.js";
 import authRoutes from "./src/routes/auth.js";
+import oauthRoutes from "./src/routes/oauth.js";
 import productRoutes from "./src/routes/products.js";
 import stockRoutes from "./src/routes/stock.js";
 import operationsRoutes from "./src/routes/operations.js";
@@ -20,47 +22,7 @@ app.set("trust proxy", 1);
 const clientDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const clientFile = path.join(clientDir, "index.html");
 
-// Exact origins and wildcard patterns (for example https://*.vercel.app) are both supported.
-const normalizeOrigin = (value) => {
-  const raw = String(value).trim().replace(/\/+$/, "");
-  if (raw.includes("*")) return raw;
-  try {
-    return new URL(raw).origin;
-  } catch {
-    return raw;
-  }
-};
-
-const defaultOrigins = [
-  "https://genzura-ububiko-bwawe.vercel.app",
-  // Vercel preview deployments use names like genzura-ububiko-bwawe-<hash>-<scope>.vercel.app.
-  "https://genzura-ububiko-bwawe-*.vercel.app",
-  "https://genzura-ububiko-bwawe.onrender.com",
-  "https://ububikobwawe.netlify.app",
-  "https://*--ububikobwawe.netlify.app",
-  "http://127.0.0.1:5500",
-  "http://localhost:5500",
-  process.env.RENDER_EXTERNAL_URL || ""
-].filter(Boolean);
-
-// CLIENT_ORIGIN adds to the defaults so a stale deployment value cannot lock out the live app.
-const allowedOrigins = [...new Set(
-  [...defaultOrigins, ...(process.env.CLIENT_ORIGIN || "").split(",")]
-    .map(normalizeOrigin)
-    .filter(Boolean)
-)];
-
 console.log(`Allowed browser origins: ${allowedOrigins.join(", ") || "(none)"}`);
-
-const isOriginAllowed = (origin) => {
-  if (!origin || allowedOrigins.includes("*")) return true;
-  const normalized = normalizeOrigin(origin);
-  return allowedOrigins.some((allowed) => {
-    if (!allowed.includes("*")) return allowed === normalized;
-    const pattern = allowed.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
-    return new RegExp(`^${pattern}$`, "i").test(normalized);
-  });
-};
 
 // The single-file frontend uses inline scripts/styles, so the default CSP would block it.
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -98,6 +60,7 @@ const loginLimiter = rateLimit({
 
 app.use("/api/auth/login", loginLimiter);
 app.use("/api/auth", authRoutes);
+app.use("/api/auth/oauth", oauthRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api", stockRoutes);
 app.use("/api", operationsRoutes);

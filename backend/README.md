@@ -62,6 +62,18 @@ Login body:
 }
 ```
 
+## OAuth sign-in (Google and GitHub)
+
+Optional: the login screen shows **Continue with Google/GitHub** when the matching credentials are configured.
+
+1. In Google Cloud Console, create an OAuth client (Web application) and add `https://genzura-ububiko-bwawe.onrender.com/api/auth/oauth/google/callback` as an authorized redirect URI.
+2. In GitHub → Settings → Developer settings → OAuth Apps, set the callback URL to `https://genzura-ububiko-bwawe.onrender.com/api/auth/oauth/github/callback`.
+3. In Render → Environment, set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`. Keep `OAUTH_CALLBACK_BASE` pointing at the service URL.
+4. Give the user an email on file: seed the admin with `npm run seed:admin` (it now asks for an optional email), or have an Admin add/edit a user's email in **Admin & Users**. OAuth only matches accounts with the same verified email.
+5. Keep `OAUTH_ALLOW_SIGNUP=false` unless you want any verified Google/GitHub account to auto-create a user with role `OAUTH_DEFAULT_ROLE` (default `Storekeeper`).
+
+OAuth delegates the password check to the provider; after a successful callback the API still issues its own short-lived JWT, which the frontend exchanges through `/api/auth/oauth/exchange`. Username/password login remains available.
+
 ## Main API routes
 
 | Method | Route | Purpose |

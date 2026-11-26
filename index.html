@@ -75,7 +75,7 @@ html[data-theme="dark"] .chat-line{background:#1d2b41;border-color:#35445d;color
    <div class="login-field"><label id="lbUser" for="lgUser">Izina ukoresha</label><input id="lgUser" autocomplete="username" required placeholder="Username"></div>
    <div class="login-field"><label id="lbPass" for="lgPass">Ijambo ry'ibanga</label><input id="lgPass" type="password" autocomplete="current-password" required placeholder="Password"></div>
    <div class="login-field"><label id="lbApi" for="lgApi">API URL</label><input id="lgApi" placeholder="https://your-api.onrender.com/api" spellcheck="false"></div>
-   <button class="login-submit" id="lgBtn" type="submit">Injira →</button><div class="login-error" id="lgError" role="alert"></div>
+   <button class="login-submit" id="lgBtn" type="submit">Injira →</button><button class="login-submit" id="googleBtn" type="button">G · Continue with Google</button><button class="login-submit" id="githubBtn" type="button">⌥ · Continue with GitHub</button><div class="login-error" id="lgError" role="alert"></div>
   </form>
   <div class="login-bottom"><label id="lbLang" for="lgLang">Ururimi / Language / Langue</label><select id="lgLang"><option value="rw">🇷🇼 Ikinyarwanda</option><option value="en">🇬🇧 English</option><option value="fr">🇫🇷 Français</option></select><button class="btn theme-toggle" id="lgTheme" type="button">🌙 <span>Dark</span></button></div>
   <p class="login-note" id="lgNote">Enter the API URL once; it is saved in this browser.</p>
@@ -166,7 +166,7 @@ async function loadAll(){
  data.returns=(rt.returns||[]).map(x=>({id:x.reference,bid:x._id,customer:x.customer||"—",product:x.productName||"—",qty:Number(x.qty)||0,reason:x.reason||"",refund:Number(x.refund)||0,status:x.status,date:day(x.date),by:x.byName||x.by||"—"}));
  data.suppliers=(su.suppliers||[]).map(x=>({id:x._id,name:x.name,contact:x.contact||"",phone:x.phone||"",email:x.email||"",items:x.items||"",status:x.status||"active",notes:x.notes||""}));
  data.customers=(cu.customers||[]).map(x=>({id:x._id,name:x.name,phone:x.phone||"",email:x.email||"",notes:x.notes||""}));
- data.users=(us.users||[]).map(x=>({id:x._id||x.id,username:x.username,name:x.name||x.username,role:x.role,blocked:!!x.blocked}));
+ data.users=(us.users||[]).map(x=>({id:x._id||x.id,username:x.username,name:x.name||x.username,email:x.email||"",role:x.role,blocked:!!x.blocked}));
  data.audit=(au.audit||[]).map(x=>({date:new Date(x.createdAt||x.date).toLocaleString(),actor:x.actorName||"—",action:x.action,target:x.target||""}));
 }
 const prodById=id=>data.products.find(p=>String(p.id)===String(id));
@@ -191,6 +191,18 @@ $("loginForm").addEventListener("submit",async e=>{
  }catch(err){$("lgError").textContent=err.message||"Sign in failed."}
  finally{btn.disabled=false;btn.textContent=tr("login")}
 });
+async function startOAuth(provider){
+ const btn=$(provider==="google"?"googleBtn":"githubBtn");
+ if(btn.disabled)return;
+ $("lgError").textContent="";btn.disabled=true;
+ try{
+  const r=await api(`/auth/oauth/${provider}/url?redirect=${encodeURIComponent(location.origin)}`,{skipAuth:true});
+  if(!r.url)throw new Error(r.message||"OAuth sign-in is unavailable.");
+  location.assign(r.url);
+ }catch(err){$("lgError").textContent=err.message||"OAuth sign-in failed.";btn.disabled=false}
+}
+$("googleBtn").addEventListener("click",()=>startOAuth("google"));
+$("githubBtn").addEventListener("click",()=>startOAuth("github"));
 function showApp(){page="dashboard";query="";filter="all";$("loginShell").hidden=true;$("app").hidden=false;$("app").removeAttribute("inert");$("app").removeAttribute("aria-hidden");$("app").classList.add("auth");render()}
 $("logoutBtn").addEventListener("click",logoutLocal);
 $("topLang").addEventListener("change",e=>{lang=e.target.value;try{localStorage.setItem("ububiko-lang",lang)}catch{}applyLang()});
@@ -292,9 +304,9 @@ views.customers=()=>{
 
 views.users=()=>{
  if(!allowed("users"))return denied();
- const rows=data.users.map(u=>`<tr><td><b>${esc(u.username)}</b></td><td>${esc(u.role)}</td><td>${badge(u.blocked?"rejected":"available")}</td><td>${String(u.id)===String(user.id)?`<span class="status">You</span>`:`<button class="btn" data-reset="${esc(u.id)}">Reset password</button> <button class="btn" data-block="${esc(u.id)}">${u.blocked?"Unblock":"Block"}</button>`}</td></tr>`).join("");
- const html=head(tr("users"),tr("moduleInfo"),allowed("users","c")?`<button class="btn btn-gold" onclick="openUser()">＋ ${esc(tr("add"))}</button>`:"")+`<div class="panel">${table([tr("user"),tr("role"),tr("status"),tr("action")],rows)}</div>`;
- queueMicrotask(()=>{document.querySelectorAll("[data-block]").forEach(b=>b.onclick=()=>blockUser(b.dataset.block));document.querySelectorAll("[data-reset]").forEach(b=>b.onclick=()=>resetPassword(b.dataset.reset))});
+ const rows=data.users.map(u=>`<tr><td><b>${esc(u.username)}</b></td><td>${esc(u.email||"—")}</td><td>${esc(u.role)}</td><td>${badge(u.blocked?"rejected":"available")}</td><td>${String(u.id)===String(user.id)?`<span class="status">You</span>`:`<button class="btn" data-edit="${esc(u.id)}">✎</button> <button class="btn" data-reset="${esc(u.id)}">Reset password</button> <button class="btn" data-block="${esc(u.id)}">${u.blocked?"Unblock":"Block"}</button>`}</td></tr>`).join("");
+ const html=head(tr("users"),tr("moduleInfo"),allowed("users","c")?`<button class="btn btn-gold" onclick="openUser()">＋ ${esc(tr("add"))}</button>`:"")+`<div class="panel">${table([tr("user"),"Email",tr("role"),tr("status"),tr("action")],rows)}</div>`;
+ queueMicrotask(()=>{document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>openUser(b.dataset.edit));document.querySelectorAll("[data-block]").forEach(b=>b.onclick=()=>blockUser(b.dataset.block));document.querySelectorAll("[data-reset]").forEach(b=>b.onclick=()=>resetPassword(b.dataset.reset))});
  return html;
 };
 
@@ -339,8 +351,13 @@ function openSupplier(id=null){if(!allowed("suppliers",id?"u":"c"))return toast(
  openModal(s?"Edit supplier":tr("add"),"",f(tr("name"),"fName","text",s?.name||"","required")+f("Contact","fContact","text",s?.contact||"")+f("Phone","fPhone","text",s?.phone||"","required")+f("Email","fEmail","email",s?.email||"")+f("Items","fItems","text",s?.items||"")+sel(tr("status"),"fStatus",[["active","Active"],["inactive","Inactive"]],s?.status||"active")+f("Notes","fNotes","text",s?.notes||""),async()=>{if(!v("fName")||!v("fPhone")){toast("Company name and phone are required.");return false}const body=JSON.stringify({name:v("fName"),contact:v("fContact"),phone:v("fPhone"),email:v("fEmail"),items:v("fItems"),status:v("fStatus"),notes:v("fNotes")});await api(s?`/suppliers/${s.id}`:"/suppliers",{method:s?"PATCH":"POST",body});return true})}
 function openCustomer(id=null){if(!allowed("customers",id?"u":"c"))return toast(tr("noPermission"));const c=id?data.customers.find(x=>x.id===id):null;
  openModal(c?"Edit customer":tr("add"),"",f(tr("name"),"fName","text",c?.name||"","required")+f("Phone","fPhone","text",c?.phone||"","required")+f("Email","fEmail","email",c?.email||"")+f("Notes","fNotes","text",c?.notes||""),async()=>{if(!v("fName")||!v("fPhone")){toast("Name and phone are required.");return false}const body=JSON.stringify({name:v("fName"),phone:v("fPhone"),email:v("fEmail"),notes:v("fNotes")});await api(c?`/customers/${c.id}`:"/customers",{method:c?"PATCH":"POST",body});return true})}
-function openUser(){if(!allowed("users","c"))return toast(tr("noPermission"));
- openModal(tr("add"),"",f(tr("user"),"fName","text","","required")+f(tr("password"),"fPass","password","",'minlength="8" required')+sel(tr("role"),"fRole",["Admin","Manager","Cashier","Storekeeper"].map(r=>[r,r])),async()=>{if(v("fPass").length<8){toast("Password must be at least 8 characters.");return false}await api("/users",{method:"POST",body:JSON.stringify({username:v("fName").toLowerCase(),name:v("fName"),password:v("fPass"),role:v("fRole")})});return true})}
+function openUser(id=null){if(!allowed("users",id?"u":"c"))return toast(tr("noPermission"));const u=id?data.users.find(x=>String(x.id)===String(id)):null;
+ openModal(u?tr("update"):tr("add"),"",f(tr("user"),"fName","text",u?.username||"","required")+f("Email (for OAuth)","fEmail","email",u?.email||"","required")+(u?"":f(tr("password"),"fPass","password","",'minlength="8" required'))+sel(tr("role"),"fRole",["Admin","Manager","Cashier","Storekeeper"].map(r=>[r,r]),u?.role||"Storekeeper"),async()=>{
+  if(!v("fName")||!v("fEmail")){toast("Username and email are required.");return false}
+  if(u){await api(`/users/${u.id}`,{method:"PATCH",body:JSON.stringify({name:v("fName"),email:v("fEmail"),role:v("fRole")})})}
+  else{if(v("fPass").length<8){toast("Password must be at least 8 characters.");return false}await api("/users",{method:"POST",body:JSON.stringify({username:v("fName").toLowerCase(),name:v("fName"),email:v("fEmail"),password:v("fPass"),role:v("fRole")})})}
+  return true
+ })}
 function resetPassword(id){if(!allowed("users","u"))return toast(tr("noPermission"));
  openModal("Reset password","",f("New password","fPass","password","",'minlength="8" required'),async()=>{if(v("fPass").length<8){toast("Password must be at least 8 characters.");return false}await api(`/users/${id}/password`,{method:"PATCH",body:JSON.stringify({password:v("fPass")})});return true})}
 async function changePassword(){if(v("newPass").length<8)return toast("New password must be at least 8 characters.");try{await api("/auth/change-password",{method:"POST",body:JSON.stringify({currentPassword:v("curPass"),newPassword:v("newPass")})});toast(tr("saved"))}catch(e){toast(e.message)}}
@@ -363,7 +380,19 @@ applyLang();
 (async()=>{
  try{const r=await fetch(initialBase+"/health");if(!r.ok)throw new Error("Health check failed");const d=await r.json();$("lgNote").textContent=tr("connected")+" · "+(d.database||"")+" · "+initialBase}
  catch{$("lgNote").textContent=tr("offline")+" · "+tr("apiHint")}
- if(token){try{const me=await api("/auth/me");user=me.user;showApp();try{await loadAll();render()}catch(err){toast(err.message||"Some inventory data could not be loaded.")}}catch{logoutLocal()}}
+ const hashParams=new URLSearchParams(location.hash.replace(/^#/,""));
+ const oauthError=hashParams.get("oauth_error"),oauthTicket=hashParams.get("ticket");
+ if(location.hash)history.replaceState(null,"",location.pathname+location.search);
+ if(oauthError)$("lgError").textContent=decodeURIComponent(oauthError);
+ if(oauthTicket){
+  try{
+   const r=await api("/auth/oauth/exchange",{method:"POST",body:JSON.stringify({ticket:oauthTicket}),skipAuth:true});
+   token=r.token;sessionStorage.setItem("ububiko-token",token);
+   const me=await api("/auth/me");user=me.user;
+   showApp();
+   try{await loadAll();render()}catch(err){toast(err.message||"Some inventory data could not be loaded.")}
+  }catch(err){$("lgError").textContent=err.message||"OAuth sign-in failed."}
+ } else if(token){try{const me=await api("/auth/me");user=me.user;showApp();try{await loadAll();render()}catch(err){toast(err.message||"Some inventory data could not be loaded.")}}catch{logoutLocal()}}
 })();
 </script>
 </body>

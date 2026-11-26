@@ -18,6 +18,7 @@ try {
     const username = (await rl.question("New Admin username: ")).trim().toLowerCase();
     const name = (await rl.question("Admin display name: ")).trim();
     const password = await rl.question("New Admin password (minimum 8 characters): ");
+    const email = (await rl.question("Admin email for Google/GitHub sign-in (optional): ")).trim().toLowerCase();
 
     if (!/^[a-z0-9._-]{3,24}$/.test(username)) {
       throw new Error("Username must be 3–24 characters and use letters, numbers, dot, underscore or hyphen.");
@@ -25,8 +26,11 @@ try {
     if (!name || password.length < 8) {
       throw new Error("A display name and a password of at least 8 characters are required.");
     }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error("Enter a valid email address or leave it blank.");
+    }
 
-    await User.create({ username, name, role: "Admin", passwordHash: password });
+    await User.create({ username, name, role: "Admin", email: email || undefined, passwordHash: password });
     console.log("Admin account created successfully. Keep the password private.");
   }
 } catch (error) {

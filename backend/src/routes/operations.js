@@ -202,17 +202,36 @@ router.get("/users", allowRoles("Admin"), async (_req, res, next) => {
 
 router.post("/users", allowRoles("Admin"), async (req, res, next) => {
   try {
-    const { username, name, password, role } = req.body;
+    const { username, name, password, role, email = "" } = req.body;
     if (!username || !name || String(password || "").length < 8 || !roles.includes(role)) {
       return res.status(400).json({ message: "Provide a valid username, name, role and password of at least 8 characters." });
     }
 
-    const user = await User.create({ username, name, role, passwordHash: password });
+    const user = await User.create({ username, name, role, email: email || undefined, passwordHash: password });
     await writeAudit(req.user, "USER_CREATED", user.username);
     res.status(201).json({
-      user: { id: user._id, username: user.username, name: user.name, role: user.role, blocked: user.blocked }
+      user: { id: user._id, username: user.username, name: user.name, email: user.email || "", role: user.role, blocked: user.blocked }
     });
   } catch (error) { next(error); }
+});
+
+router.patch("/users/:id", allowRoles("Admin"), async (req, res, next) => {
+  try {
+    const fields = ["name", "email", "role"];
+    const changes = Object.fromEntries(Object.entries(req.body).filter(([key]) => fields.includes(key)));
+    if (changes.role && !roles.includes(changes.role)) {
+      return res.status(400).json({ message: "Choose a valid role." });
+    }
+    if (changes.email === "") changes.email = undefined;
+    const user = await User.findByIdAndUpdate(req.params.id, changes, { new: true, runValidators: true });
+    if (!user) return res.status(404).json({ message: "User not found." });
+    await writeAudit(req.user, "USER_UPDATED", user.username);
+    return res.json({
+      user: { id: user._id, username: user.username, name: user.name, email: user.email || "", role: user.role, blocked: user.blocked }
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.patch("/users/:id/block", allowRoles("Admin"), async (req, res, next) => {
